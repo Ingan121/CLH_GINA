@@ -6,8 +6,10 @@
 #include <gdiplusheaders.h>
 #include <gdiplusinit.h>
 #include <atlbase.h>
-#include <dui/DirectUI/DirectUI.h>
 #include <vector>
+#include <lm.h>
+
+#pragma comment(lib, "netapi32.lib")
 
 static std::string ws2s(const std::wstring& s)
 {
@@ -63,45 +65,53 @@ static std::vector<std::wstring> split(std::wstring s, std::wstring delimiter)
     return res;
 }
 
-static HBITMAP GetHBITMAPFromImageFile(WCHAR* pFilePath)
+static std::wstring GetDomainName()
 {
-    Gdiplus::GdiplusStartupInput gpStartupInput;
-    ULONG_PTR gpToken;
-    Gdiplus::GdiplusStartup(&gpToken, &gpStartupInput, NULL);
-    HBITMAP result = NULL;
-    Gdiplus::Bitmap* bitmap = Gdiplus::Bitmap::FromFile(pFilePath, false);
-    if (bitmap)
+	wchar_t* domainName = NULL;
+	DWORD size = 0;
+	GetComputerNameExW(ComputerNameDnsDomain, NULL, &size);
+	domainName = new wchar_t[size];
+	GetComputerNameExW(ComputerNameDnsDomain, domainName, &size);
+	std::wstring domain = domainName;
+	delete[] domainName;
+	return domain;
+}
+
+static std::wstring GetLogonName()
+{
+    wchar_t username[UNLEN + 1];
+    DWORD username_len = UNLEN + 1;
+    if (GetUserNameW(username, &username_len))
     {
-        bitmap->GetHBITMAP(Gdiplus::Color(255, 255, 255), &result);
-        delete bitmap;
+		return GetDomainName() + L"\\" + std::wstring(username);
     }
-    Gdiplus::GdiplusShutdown(gpToken);
-    return result;
+    return L"";
 }
 
-HBITMAP GetHBITMAPFromImageResource(int resourceID);
-
-static __int64 DirectUIElementAdd(DirectUI::Element* Parent, DirectUI::Element* Child)
+static std::wstring GetLogonTime()
 {
-    //ELEMENT::ADD
-    //https://imgur.com/a/pEyfcVQ
-    return (*(__int64(__fastcall**)(DirectUI::Element*, DirectUI::Element**, __int64))(*(uintptr_t*)Parent + 128i64))(
-        Parent,
-        (DirectUI::Element**)&Child,
-        1i64);
+    wchar_t username[UNLEN + 1];
+    DWORD username_len = UNLEN + 1;
+    if (GetUserNameW(username, &username_len))
+    {
+        LPUSER_INFO_2 pBuf = NULL;
+        NET_API_STATUS nStatus = NetUserGetInfo(NULL, username, 2, (LPBYTE*)&pBuf);
+        if (nStatus == NERR_Success)
+        {
+            time_t logonTime = static_cast<time_t>(pBuf->usri2_last_logon);
+            std::wstring logonTimeStr = _wctime(&logonTime);
+            NetApiBufferFree(pBuf);
+            return logonTimeStr;
+        }
+    }
+    return L"";
 }
 
-static std::wstring GetStringFromConsoleLogon(UINT str)
+static void CenterWindow(HWND hWnd)
 {
-    WCHAR buf[256];
-    buf[0] = '\0';
-    LoadStringW(GetModuleHandle(L"ConsoleLogon.dll"),str, buf,256);
-    return buf;
-}
-
-static std::wstring AtomToStr(ATOM atom)
-{
-    WCHAR atomName[256];
-    GetAtomNameW(atom, atomName, 256);
-    return atomName;
+	RECT rc;
+	GetWindowRect(hWnd, &rc);
+	int xPos = (GetSystemMetrics(SM_CXSCREEN) - rc.right) / 2;
+	int yPos = (GetSystemMetrics(SM_CYSCREEN) - rc.bottom) / 2;
+	SetWindowPos(hWnd, 0, xPos, yPos, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 }

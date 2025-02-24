@@ -20,14 +20,14 @@ namespace external
 
     static void MessageOptionControl_Press(void* actualInstance, const struct _KEY_EVENT_RECORD* keyrecord, int* success)
     {
-        static auto fMessageOptionControl_Press = EXTERNAL(void(*)(void* actualInstance, const struct _KEY_EVENT_RECORD* keyrecord, int* success),"MessageOptionControl_Press");
+        static auto fMessageOptionControl_Press = EXTERNAL(void(*)(void* actualInstance, const struct _KEY_EVENT_RECORD* keyrecord, int* success), "MessageOptionControl_Press");
         if (fMessageOptionControl_Press)
-            fMessageOptionControl_Press(actualInstance,keyrecord,success);
+            fMessageOptionControl_Press(actualInstance, keyrecord, success);
     }
 
     static std::wstring MessageOptionControl_GetText(void* actualInstance)
     {
-        static auto fMessageOptionControl_GetText = EXTERNAL(const wchar_t*(*)(void* actualInstance), "MessageOptionControl_GetText");
+        static auto fMessageOptionControl_GetText = EXTERNAL(const wchar_t* (*)(void* actualInstance), "MessageOptionControl_GetText");
         if (fMessageOptionControl_GetText)
             return fMessageOptionControl_GetText(actualInstance);
 
@@ -43,7 +43,7 @@ namespace external
 
     static std::wstring SecurityOptionControl_getString(void* actualInstance)
     {
-        static auto fSecurityOptionControl_getString = EXTERNAL(const wchar_t*(*)(void* actualInstance), "SecurityOptionControl_getString");
+        static auto fSecurityOptionControl_getString = EXTERNAL(const wchar_t* (*)(void* actualInstance), "SecurityOptionControl_getString");
         if (fSecurityOptionControl_getString)
             return std::wstring(fSecurityOptionControl_getString(actualInstance));
     }
@@ -57,7 +57,7 @@ namespace external
 
     static void* GetConsoleUIView()
     {
-        static auto fGetConsoleUIView = EXTERNAL(void*(*)(), "GetConsoleUIView");
+        static auto fGetConsoleUIView = EXTERNAL(void* (*)(), "GetConsoleUIView");
         if (fGetConsoleUIView)
             return fGetConsoleUIView();
 
@@ -71,9 +71,9 @@ namespace external
         if (fGetProfilePicturePathFromSID)
         {
             WCHAR* ptr = (WCHAR*)malloc((MAX_PATH + 1) * sizeof(WCHAR));
-            ZeroMemory(ptr,(MAX_PATH + 1) * sizeof(WCHAR));
+            ZeroMemory(ptr, (MAX_PATH + 1) * sizeof(WCHAR));
             ptr[MAX_PATH] = L'\0';
-            fGetProfilePicturePathFromSID(sid.c_str(), ptr,bHighRes);
+            fGetProfilePicturePathFromSID(sid.c_str(), ptr, bHighRes);
             std::wstring ret = ptr;
             free(ptr);
             return ret;
@@ -103,8 +103,8 @@ namespace external
     static std::wstring GetProfilePicturePathFromUsername(std::wstring username, bool bHighRes = false)
     {
         std::wstring sid;
-        GetSIDFromName(username.c_str(),&sid);
-        auto res = GetProfilePicturePathFromSID(sid,bHighRes);
+        GetSIDFromName(username.c_str(), &sid);
+        auto res = GetProfilePicturePathFromSID(sid, bHighRes);
         return sid;
         /*static auto fGetProfilePicturePathFromUsername = EXTERNAL(const wchar_t* (*)(const wchar_t*, bool bHighRes), "GetProfilePicturePathFromUsername");
         if (fGetProfilePicturePathFromUsername)
@@ -129,11 +129,11 @@ namespace external
         return std::wstring();
     }
 
-    static void EditControl_SetInputtedText(void* actualInstance,std::wstring input)
+    static void EditControl_SetInputtedText(void* actualInstance, std::wstring input)
     {
         static auto fEditControl_SetInputtedText = EXTERNAL(const wchar_t* (*)(void* actualInstance, const wchar_t* input), "EditControl_SetInputtedText");
         if (fEditControl_SetInputtedText)
-            fEditControl_SetInputtedText(actualInstance,input.c_str());
+            fEditControl_SetInputtedText(actualInstance, input.c_str());
     }
 
     static bool EditControl_isVisible(void* actualInstance)
@@ -200,16 +200,16 @@ namespace external
 
     static HBITMAP BrandingLoadImage(const wchar_t* a1, __int64 a2, UINT a3, int a4, int a5, UINT a6)
     {
-        static auto fBrandingLoadImage = reinterpret_cast<HBITMAP(__fastcall*)(const wchar_t* a1, __int64 a2, UINT a3, int a4, int a5, UINT a6)>(GetProcAddress(LoadLibrary(L"winbrand.dll"),"BrandingLoadImage"));
+        static auto fBrandingLoadImage = reinterpret_cast<HBITMAP(__fastcall*)(const wchar_t* a1, __int64 a2, UINT a3, int a4, int a5, UINT a6)>(GetProcAddress(LoadLibrary(L"winbrand.dll"), "BrandingLoadImage"));
         if (fBrandingLoadImage)
-            return fBrandingLoadImage(a1,a2,a3,a4,a5,a6);
+            return fBrandingLoadImage(a1, a2, a3, a4, a5, a6);
 
         return 0;
     }
 
     static __int64 TouchEditBaseGetPasswordCharacter(void* touchEditbase)
     {
-        static auto fGetPasswordCharacter = reinterpret_cast<__int64(__fastcall*)(void*)>(GetProcAddress(GetModuleHandleW(L"dui70.dll"),"?GetPasswordCharacter@TouchEditBase@DirectUI@@QEAAHXZ"));
+        static auto fGetPasswordCharacter = reinterpret_cast<__int64(__fastcall*)(void*)>(GetProcAddress(GetModuleHandleW(L"dui70.dll"), "?GetPasswordCharacter@TouchEditBase@DirectUI@@QEAAHXZ"));
         if (fGetPasswordCharacter)
             return fGetPasswordCharacter(touchEditbase);
 
