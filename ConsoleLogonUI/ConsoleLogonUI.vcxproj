@@ -282,9 +282,6 @@
     <None Include="spdlog\fmt\bundled\fmt.license.rst" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="resources\ConsoleLogonUI.rc" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="dui\DirectUI\DirectUI.vcxproj">
       <Project>{0B7DE49A-33C6-41B1-A9CE-D353031F8454}</Project>
     </ProjectReference>
@@ -297,10 +294,6 @@
     <Xml Include="resources\statusview.xml" />
     <Xml Include="resources\test.xml" />
     <Xml Include="resources\userselect.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Bitmap120.bmp" />
-    <Image Include="resources\Bitmap120.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

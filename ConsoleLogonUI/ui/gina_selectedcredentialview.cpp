@@ -35,6 +35,7 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 		}
 		else {
 			if (isCredentialViewActive.exchange(true)) {
+				//MessageBoxW(NULL, L"Already active", L"Info", MB_OK | MB_ICONINFORMATION);
 				return;
 			}
 		}
@@ -118,6 +119,7 @@ void ginaSelectedCredentialView::Destroy()
 {
 	ginaSelectedCredentialView* dlg = ginaSelectedCredentialView::Get();
 	EndDialog(dlg->hDlg, 0);
+	PostMessage(dlg->hDlg, WM_DESTROY, 0, 0);
 }
 
 void ginaSelectedCredentialView::Show()
@@ -138,11 +140,12 @@ void ginaSelectedCredentialView::BeginMessageLoop()
 {
 	ginaSelectedCredentialView* dlg = ginaSelectedCredentialView::Get();
 	MSG msg;
-	while (GetMessageW(&msg, dlg->hDlg, 0, 0))
+	while (GetMessageW(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
+	//MessageBoxW(NULL, L"End of message loop", L"Info", MB_OK | MB_ICONINFORMATION);
 }
 
 int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -299,6 +302,20 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		}
 		break;
 	}
+    case WM_KEYDOWN:
+    {
+        if (wParam == VK_RETURN)
+        {
+            // Handle Enter key
+            SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_OK, BN_CLICKED), 0);
+        }
+        else if (wParam == VK_ESCAPE)
+        {
+            // Handle Esc key
+            SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_CANCEL, BN_CLICKED), 0);
+        }
+        break;
+    }
 	case WM_ERASEBKGND:
 	{
 		HDC hdc = (HDC)wParam;
@@ -322,7 +339,6 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 	case WM_CLOSE:
 	{
 		EndDialog(hWnd, 0);
-		PostQuitMessage(0); // Trigger exit thread
 		break;
 	}
 	case WM_DESTROY:
@@ -354,6 +370,7 @@ void ginaChangePwdView::Destroy()
 {
 	ginaChangePwdView* dlg = ginaChangePwdView::Get();
 	EndDialog(dlg->hDlg, 0);
+	PostMessage(dlg->hDlg, WM_DESTROY, 0, 0);
 }
 
 void ginaChangePwdView::Show()
@@ -409,14 +426,12 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		{
 			// Cancel button
 			EndDialog(hWnd, 0);
-			PostQuitMessage(0); // Trigger exit thread
 		}
 		break;
 	}
 	case WM_CLOSE:
 	{
 		EndDialog(hWnd, 0);
-		PostQuitMessage(0); // Trigger exit thread
 		break;
 	}
 	case WM_DESTROY:

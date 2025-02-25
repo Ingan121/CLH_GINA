@@ -12,18 +12,3 @@ struct MessageOptionControlWrapper
 
     std::wstring GetText();
 };
-
-class messageViewDlg
-{
-public:
-    HWND hDlg;
-	std::wstring message;
-	static messageViewDlg* Get();
-
-	static void Create();
-	static void Destroy();
-	static void Show();
-	static void Hide();
-
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-};

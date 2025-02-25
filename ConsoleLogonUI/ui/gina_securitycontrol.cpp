@@ -58,6 +58,7 @@ void ginaSecurityControl::Destroy()
 {
 	ginaSecurityControl* dlg = ginaSecurityControl::Get();
 	EndDialog(dlg->hDlg, 0);
+	PostMessage(dlg->hDlg, WM_DESTROY, 0, 0);
 }
 
 void ginaSecurityControl::Show()

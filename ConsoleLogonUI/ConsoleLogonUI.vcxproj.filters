@@ -400,11 +400,6 @@
     <None Include="spdlog\fmt\bundled\fmt.license.rst" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="resources\ConsoleLogonUI.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
     <Xml Include="resources\Main.xml" />
     <Xml Include="resources\test.xml" />
     <Xml Include="resources\securitycontrol.xml" />
@@ -412,13 +407,5 @@
     <Xml Include="resources\selectedcredentialview.xml" />
     <Xml Include="resources\statusview.xml" />
     <Xml Include="resources\userselect.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="Bitmap120.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="resources\Bitmap120.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
   </ItemGroup>
 </Project>

@@ -5,30 +5,84 @@
 #include "gina_messageview.h"
 #include "util/util.h"
 #include "util/interop.h"
+#include <thread>
+#include <atomic>
+#include <mutex>
 
 std::vector<MessageOptionControlWrapper> controls;
 
 std::wstring gMessage;
 
+std::atomic<bool> isMessageViewActive(false);
+std::mutex messageViewMutex;
+
 bool bIsInMessageView = false;
 
 void external::MessageView_SetActive()
 {
-	//MessageBoxW(NULL, gMessage.c_str(), L"Windows", MB_OK);
-	//controls[0].Press();
+	std::lock_guard<std::mutex> lock(messageViewMutex);
+	//HideConsoleUI();
+	std::thread([=] {
+		if (isMessageViewActive.exchange(true)) {
+			return;
+		}
+		
+		int btnCount = controls.size();
+		int res = 0;
+		if (btnCount <= 1) {
+			res = MessageBoxW(0, gMessage.c_str(), L"Windows", MB_OK | MB_ICONINFORMATION);
+			controls[0].Press();
+		}
+		else if (btnCount == 2) {
+			res = MessageBoxW(0, gMessage.c_str(), L"Windows", MB_YESNO | MB_ICONINFORMATION);
+			if (res == IDYES) {
+				controls[0].Press();
+			}
+			else {
+				controls[1].Press();
+			}
+		}
+		else {
+			res = MessageBoxW(0, gMessage.c_str(), L"Windows", MB_YESNOCANCEL | MB_ICONINFORMATION);
+			if (res == IDYES) {
+				controls[0].Press();
+			}
+			else if (res == IDNO) {
+				controls[1].Press();
+			}
+			else {
+				controls[2].Press();
+			}
+		}
+		isMessageViewActive = false;
+	}).detach();
 }
 
 void external::MessageOptionControl_Create(void* actualInsance, int optionflag)
 {
+	MessageOptionControlWrapper wrapper;
+	wrapper.actualInstance = actualInsance;
+	wrapper.optionflag = optionflag;
+	controls.push_back(wrapper);
 }
 
 void external::MessageView_SetMessage(const wchar_t* message)
 {
+	gMessage = message;
 }
 
 void external::MessageOptionControl_Destroy(void* actualInstance)
 {
-
+	for (int i = 0; i < controls.size(); ++i)
+	{
+		auto& button = controls[i];
+		if (button.actualInstance == actualInstance)
+		{
+			//SPDLOG_INFO("FOUND AND DELETING MessageOptionControl");
+			controls.erase(controls.begin() + i);
+			break;
+		}
+	}
 }
 
 void external::MessageOrStatusView_Destroy()
@@ -39,39 +93,6 @@ void external::MessageOrStatusView_Destroy()
 	}
 }
 
-messageViewDlg* messageViewDlg::Get()
-{
-	static messageViewDlg dlg;
-	return &dlg;
-}
-
-LRESULT CALLBACK messageViewDlg::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-	HINSTANCE hInstance = ginaManager::Get()->hInstance;
-
-	switch (message)
-	{
-	case WM_CREATE:
-	{
-		CreateWindowW(L"STATIC", gMessage.c_str(), WS_CHILD | WS_VISIBLE, 0, 0, 100, 100, hWnd, 0, hInstance, 0);
-		for (int i = 0; i < controls.size(); ++i)
-		{
-			auto& control = controls[i];
-			CreateWindowW(L"BUTTON", control.GetText().c_str(), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 0, 0, 100, 100, hWnd, (HMENU)i, hInstance, 0);
-		}
-		break;
-	}
-	case WM_COMMAND:
-	{
-		int id = LOWORD(wParam);
-		auto& control = controls[id];
-		control.Press();
-		break;
-	}
-	}
-	return DefWindowProc(hWnd, message, wParam, lParam);
-}
-
 void MessageOptionControlWrapper::Press()
 {
 	_KEY_EVENT_RECORD keyrecord;
@@ -80,9 +101,12 @@ void MessageOptionControlWrapper::Press()
 	int result;
 	if (actualInstance)
 	{
-		//SPDLOG_INFO("Actual instance {} isn't null, so we are calling MessageOptionControl_Press with enter on the control!", actualInstance);
+		//MessageBoxW(NULL, L"Actual instance {} isn't null, so we are calling MessageOptionControl_Press with enter on the control!", L"Info", MB_OK | MB_ICONINFORMATION);
 
 		external::MessageOptionControl_Press(actualInstance, &keyrecord, &result);
+	}
+	else {
+		MessageBoxW(NULL, L"Actual instance is null!", L"Info", MB_OK | MB_ICONINFORMATION);
 	}
 }
 

@@ -31,6 +31,8 @@ public:
 	HINSTANCE hInstance;
 	HMODULE hGinaDll;
 
+	HBITMAP hBar;
+
 	ginaManager();
 
 	static ginaManager* Get();
@@ -38,7 +40,7 @@ public:
 	void LoadGina();
 	void UnloadGina();
 
-	void LoadBranding(HWND hDlg, BOOL isLarge);
+	void LoadBranding(HWND hDlg, BOOL isLarge, BOOL noBarAsImgCtrl = FALSE);
 
 	void CloseAllDialogs();
 };

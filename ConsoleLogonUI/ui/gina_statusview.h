@@ -8,6 +8,7 @@ class ginaStatusView
 {
 public:
 	HWND hDlg;
+	int barOffset = 0;
 	static ginaStatusView* Get();
 	static void Create();
 	static void Destroy();

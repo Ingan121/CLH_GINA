@@ -15,6 +15,7 @@ std::mutex statusViewMutex;
 void external::StatusView_SetActive(const wchar_t* text)
 {	
 	std::lock_guard<std::mutex> lock(statusViewMutex);
+	//HideConsoleUI();
 
 	ginaManager::Get()->CloseAllDialogs();
 	//MessageBox(0, text, L"StatusView_SetActive", 0);
@@ -54,6 +55,7 @@ void ginaStatusView::Destroy()
 {
 	ginaStatusView* dlg = ginaStatusView::Get();
 	EndDialog(dlg->hDlg, 0);
+	PostMessage(dlg->hDlg, WM_DESTROY, 0, 0);
 }
 
 void ginaStatusView::Show()
@@ -74,7 +76,7 @@ void ginaStatusView::BeginMessageLoop()
 {
 	ginaStatusView* dlg = ginaStatusView::Get();
 	MSG msg;
-	while (GetMessageW(&msg, NULL, 0, 0))
+	while (GetMessageW(&msg, dlg->hDlg, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
@@ -87,7 +89,31 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	{
 	case WM_INITDIALOG:
 	{
-		ginaManager::Get()->LoadBranding(hWnd, FALSE);
+		ginaManager::Get()->LoadBranding(hWnd, FALSE, TRUE);
+		SetTimer(hWnd, 20, 20, NULL);
+		break;
+	}
+	case WM_TIMER:
+	{
+		RECT rect;
+		GetClientRect(hWnd, &rect);
+		int dlgWidth = rect.right - rect.left;
+		HDC hdc = GetDC(hWnd);
+		HDC hdcMem = CreateCompatibleDC(hdc);
+		HBITMAP hBar = ginaManager::Get()->hBar;
+		BITMAP barBmp;
+		int barOffset = ginaStatusView::Get()->barOffset;
+		GetObject(hBar, sizeof(BITMAP), &barBmp);
+		int barWidth = barBmp.bmWidth;
+		SelectObject(hdcMem, hBar);
+		BitBlt(hdc, barOffset, GINA_SMALL_BRD_HEIGHT, dlgWidth - barOffset, GINA_BAR_HEIGHT, hdcMem, barOffset, 0, SRCCOPY);
+		if (barOffset > 0)
+		{
+			BitBlt(hdc, 0, GINA_SMALL_BRD_HEIGHT, barOffset, GINA_BAR_HEIGHT, hdcMem, dlgWidth - barOffset, 0, SRCCOPY);
+		}
+		DeleteDC(hdcMem);
+		ReleaseDC(hWnd, hdc);
+		ginaStatusView::Get()->barOffset = (barOffset + 5) % barWidth;
 		break;
 	}
 	case WM_COMMAND:
@@ -117,7 +143,6 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	case WM_CLOSE:
 	{
 		EndDialog(hWnd, 0);
-		PostQuitMessage(0); // Trigger exit thread
 		break;
 	}
 	case WM_DESTROY:
