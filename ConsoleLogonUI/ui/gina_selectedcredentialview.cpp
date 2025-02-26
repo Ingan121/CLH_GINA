@@ -21,8 +21,11 @@ void external::NotifyWasInSelectedCredentialView()
 
 void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisplay, int flag)
 {
+	if (!ginaManager::Get()->hGinaDll) {
+		return;
+	}
+
 	std::lock_guard<std::mutex> lock(credentialViewMutex);
-	//MessageBox(0, L"SelectedCredentialView_SetActive", L"SelectedCredentialView_SetActive", 0);
 	//HideConsoleUI();
 
 	g_accountName = accountNameToDisplay;
@@ -35,12 +38,14 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 		}
 		else {
 			if (isCredentialViewActive.exchange(true)) {
-				//MessageBoxW(NULL, L"Already active", L"Info", MB_OK | MB_ICONINFORMATION);
 				return;
 			}
 		}
 
-		ginaManager::Get()->CloseAllDialogs();
+		/*wchar_t msg[256], username[256], domain[256];
+		GetLoggedOnUserInfo(username, 256, domain, 256);
+		wsprintf(msg, L"User: %s\\%s, isSystem: %d", domain, username, IsSystemUser());
+		MessageBoxW(0, msg, L"Info", MB_OK | MB_ICONINFORMATION);*/
 
 		if (flag == 2) {
 			ginaChangePwdView::Get()->Create();
@@ -49,6 +54,8 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 			isChangePwdViewActive = false;
 		}
 		else {
+			ginaManager::Get()->CloseAllDialogs();
+			
 			ginaSelectedCredentialView::Get()->Create();
 			ginaSelectedCredentialView::Get()->Show();
 			ginaSelectedCredentialView::Get()->BeginMessageLoop();
@@ -69,7 +76,6 @@ void external::EditControl_Create(void* actualInstance)
 	wrapper.fieldNameCache = ws2s(wrapper.GetFieldName());
 	//MessageBox(0, wrapper.GetFieldName().c_str(), wrapper.GetFieldName().c_str(),0);
 	wrapper.inputBuffer = ws2s(wrapper.GetInputtedText());
-	//MessageBox(0, wrapper.GetFieldName().c_str(), wrapper.GetFieldName().c_str(), 0);
 
 	for (int i = editControls.size() - 1; i >= 0; --i)
 	{
@@ -145,7 +151,6 @@ void ginaSelectedCredentialView::BeginMessageLoop()
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
-	//MessageBoxW(NULL, L"End of message loop", L"Info", MB_OK | MB_ICONINFORMATION);
 }
 
 int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -236,9 +241,6 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 	}
 	case WM_COMMAND:
 	{
-		//wchar_t msg[256];
-		//wsprintfW(msg, L"WM_COMMAND, wParam = %d, lParam = %d", wParam, lParam);
-		//MessageBoxW(hWnd, msg, L"Info", MB_OK | MB_ICONINFORMATION);
 		if (LOWORD(wParam) == IDC_CREDVIEW_OK)
 		{
 			// OK button
@@ -246,17 +248,8 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 			wchar_t password[256];
 			GetDlgItemTextW(hWnd, 1502, username, 256);
 			GetDlgItemTextW(hWnd, 1503, password, 256);
-			//wsprintfW(msg, L"Username: %d, Password: %s", editControls.size(), password);
-			//MessageBoxW(hWnd, msg, L"Info", MB_OK | MB_ICONINFORMATION);
 			editControls[0].SetInputtedText(username);
 			editControls[1].SetInputtedText(password);
-
-			HMODULE externalHookModule = GetModuleHandleW(L"ConsoleLogonHook.dll");
-			if (!externalHookModule)
-			{
-				MessageBox(0, L"HOOK DLL NOT FOUND", L"HOOK DLL NOT FOUND", 0);
-				return false;
-			}
 
 			KEY_EVENT_RECORD rec;
 			rec.wVirtualKeyCode = VK_RETURN; //forward it to consoleuiview
@@ -323,7 +316,11 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_LARGE_BRD_HEIGHT;
+#ifdef XP
+		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
+#else
 		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+#endif
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;

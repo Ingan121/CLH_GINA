@@ -19,14 +19,13 @@ public:
 class ginaUserSelect
 {
 public:
-	HWND hWin;
+	HWND hDlg;
 	static ginaUserSelect* Get();
 	static void Create();
 	static void Destroy();
 	static void Show();
 	static void Hide();
 	static void BeginMessageLoop();
-	//static int CALLBACK DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-	static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+	static int CALLBACK DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 };
 

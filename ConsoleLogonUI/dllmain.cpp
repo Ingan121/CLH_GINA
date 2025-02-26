@@ -9,7 +9,8 @@
 extern "C" __declspec(dllexport) void InitUI()
 {
     external::InitExternal();
-	InitWallHost();
+	ginaManager::Get()->LoadGina();
+	wallHost::Create();
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule,
@@ -21,12 +22,11 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     {
     case DLL_PROCESS_ATTACH:
 		ginaManager::Get()->hInstance = hModule;
-		ginaManager::Get()->LoadGina();
         break;
 
     case DLL_PROCESS_DETACH:
 		ginaManager::Get()->UnloadGina();
-
+		wallHost::Destroy();
         break;
     }
     return TRUE;

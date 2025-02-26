@@ -25,6 +25,10 @@ void external::SecurityControl_SetActive()
 
 void external::SecurityControl_ButtonsReady()
 {
+	if (!ginaManager::Get()->hGinaDll) {
+		return;
+	}
+
 	std::lock_guard<std::mutex> lock(securityControlMutex);
 
 	std::thread([=] {
@@ -94,16 +98,21 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 	{
 		ginaStatusView::Get()->Destroy();
 		ginaManager::Get()->LoadBranding(hWnd, FALSE);
-		// TODO: Fix this
-		//std::wstring logonName = GetLogonName();
-		//wchar_t logonNameStr[512];
-		//wchar_t logonNameStrFormatted[512];
-		//LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_LOGON_NAME, logonNameStr, 512);
-		//wsprintf(logonNameStr, logonNameStr, logonName.c_str());
-		//wsprintf(logonNameStrFormatted, logonNameStr, logonName.c_str());
-		//SetDlgItemTextW(hWnd, IDC_SECURITY_LOGONNAME, logonNameStrFormatted);
-		//std::wstring logonTime = GetLogonTime();
-		//SetDlgItemTextW(hWnd, IDC_SECURITY_DATE, logonTime.c_str());
+
+		WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
+		WCHAR szFormat[256], szText[1024];
+		GetLoggedOnUserInfo(_wszUserName, MAX_PATH, _wszDomainName, MAX_PATH);
+		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_LOGON_NAME, szFormat, 256);
+		swprintf_s(szText, szFormat, _wszDomainName, _wszUserName);
+		SetDlgItemTextW(hWnd, IDC_SECURITY_LOGONNAME, szText);
+
+		SYSTEMTIME _logonTime;
+		WCHAR szDate[128], szTime[128], szDateText[256];
+		GetUserLogonTime(&_logonTime);
+		GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, NULL, &_logonTime, NULL, szDate, 128, NULL);
+		GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, NULL, &_logonTime, NULL, szTime, 128);
+		swprintf_s(szDateText, L"%s %s", szDate, szTime);
+		SetDlgItemTextW(hWnd, IDC_SECURITY_DATE, szDateText);
 		break;
 	}
 	case WM_COMMAND:
@@ -115,8 +124,9 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		}
 		else if (LOWORD(wParam) == IDC_SECURITY_LOGOFF)
 		{
-			//ExitWindowsEx(EWX_LOGOFF, 0);
-			buttonsList[2].Press();
+			buttonsList[buttonsList.size() - 1].Press();
+			ExitWindowsEx(EWX_LOGOFF, 0);
+			//buttonsList[2].Press(); // makes the system hang for some reason
 		}
 		else if (LOWORD(wParam) == IDC_SECURITY_SHUTDOWN)
 		{
@@ -161,7 +171,11 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_SMALL_BRD_HEIGHT;
+#ifdef XP
+		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
+#else
 		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+#endif
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;

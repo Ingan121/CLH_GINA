@@ -395,6 +395,9 @@
     <ClInclude Include="ui\wallhost.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="util\winsta.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="spdlog\fmt\bundled\fmt.license.rst" />

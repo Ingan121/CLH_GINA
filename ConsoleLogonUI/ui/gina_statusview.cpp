@@ -13,20 +13,23 @@ std::atomic<bool> isStatusViewActive(false);
 std::mutex statusViewMutex;
 
 void external::StatusView_SetActive(const wchar_t* text)
-{	
+{
+	if (!ginaManager::Get()->hGinaDll) {
+		return;
+	}
+
 	std::lock_guard<std::mutex> lock(statusViewMutex);
 	//HideConsoleUI();
 
 	ginaManager::Get()->CloseAllDialogs();
-	//MessageBox(0, text, L"StatusView_SetActive", 0);
 
 	g_statusText = text;
 
 	std::thread([=] {
 		if (isStatusViewActive.exchange(true)) {
+			ginaStatusView::Get()->UpdateText();
 			return;
 		}
-		//MessageBox(0, text, L"StatusView_SetActive inthread", 0);
 		
 		ginaStatusView::Get()->Create();
 		ginaStatusView::Get()->Show();
@@ -72,11 +75,17 @@ void ginaStatusView::Hide()
 	ShowWindow(dlg->hDlg, SW_HIDE);
 }
 
+void ginaStatusView::UpdateText()
+{
+	ginaStatusView* dlg = ginaStatusView::Get();
+	SetDlgItemTextW(dlg->hDlg, IDC_STATUS_TEXT, g_statusText.c_str());
+}
+
 void ginaStatusView::BeginMessageLoop()
 {
 	ginaStatusView* dlg = ginaStatusView::Get();
 	MSG msg;
-	while (GetMessageW(&msg, dlg->hDlg, 0, 0))
+	while (GetMessageW(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
@@ -98,22 +107,12 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		RECT rect;
 		GetClientRect(hWnd, &rect);
 		int dlgWidth = rect.right - rect.left;
-		HDC hdc = GetDC(hWnd);
-		HDC hdcMem = CreateCompatibleDC(hdc);
-		HBITMAP hBar = ginaManager::Get()->hBar;
-		BITMAP barBmp;
 		int barOffset = ginaStatusView::Get()->barOffset;
-		GetObject(hBar, sizeof(BITMAP), &barBmp);
-		int barWidth = barBmp.bmWidth;
-		SelectObject(hdcMem, hBar);
-		BitBlt(hdc, barOffset, GINA_SMALL_BRD_HEIGHT, dlgWidth - barOffset, GINA_BAR_HEIGHT, hdcMem, barOffset, 0, SRCCOPY);
-		if (barOffset > 0)
-		{
-			BitBlt(hdc, 0, GINA_SMALL_BRD_HEIGHT, barOffset, GINA_BAR_HEIGHT, hdcMem, dlgWidth - barOffset, 0, SRCCOPY);
-		}
-		DeleteDC(hdcMem);
-		ReleaseDC(hWnd, hdc);
-		ginaStatusView::Get()->barOffset = (barOffset + 5) % barWidth;
+		HWND bar1 = FindWindowExW(hWnd, NULL, L"STATIC", L"Bar");
+		HWND bar2 = FindWindowExW(hWnd, bar1, L"STATIC", L"Bar2");
+		SetWindowPos(bar1, NULL, barOffset, GINA_SMALL_BRD_HEIGHT, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+		SetWindowPos(bar2, NULL, barOffset - dlgWidth, GINA_SMALL_BRD_HEIGHT, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+		ginaStatusView::Get()->barOffset = (barOffset + 5) % dlgWidth;
 		break;
 	}
 	case WM_COMMAND:
@@ -127,7 +126,11 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_SMALL_BRD_HEIGHT;
+#ifdef XP
+		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
+#else
 		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+#endif
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;

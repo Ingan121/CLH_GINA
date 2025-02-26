@@ -3,6 +3,8 @@
 #include "gina_messageview.h"
 #include <string>
 
+#define GINA_STR_LOGON_MESSAGE_TITLE 1501
+
 struct MessageOptionControlWrapper
 {
     void* actualInstance;

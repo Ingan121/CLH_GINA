@@ -16,25 +16,29 @@ std::wstring gMessage;
 std::atomic<bool> isMessageViewActive(false);
 std::mutex messageViewMutex;
 
-bool bIsInMessageView = false;
-
 void external::MessageView_SetActive()
 {
 	std::lock_guard<std::mutex> lock(messageViewMutex);
 	//HideConsoleUI();
+
 	std::thread([=] {
 		if (isMessageViewActive.exchange(true)) {
 			return;
 		}
+
+		ginaManager::Get()->CloseAllDialogs();
+
+		wchar_t title[256];
+		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_LOGON_MESSAGE_TITLE, title, 256);
 		
 		int btnCount = controls.size();
 		int res = 0;
 		if (btnCount <= 1) {
-			res = MessageBoxW(0, gMessage.c_str(), L"Windows", MB_OK | MB_ICONINFORMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_OK | MB_ICONEXCLAMATION);
 			controls[0].Press();
 		}
 		else if (btnCount == 2) {
-			res = MessageBoxW(0, gMessage.c_str(), L"Windows", MB_YESNO | MB_ICONINFORMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNO | MB_ICONEXCLAMATION);
 			if (res == IDYES) {
 				controls[0].Press();
 			}
@@ -43,7 +47,7 @@ void external::MessageView_SetActive()
 			}
 		}
 		else {
-			res = MessageBoxW(0, gMessage.c_str(), L"Windows", MB_YESNOCANCEL | MB_ICONINFORMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNOCANCEL | MB_ICONEXCLAMATION);
 			if (res == IDYES) {
 				controls[0].Press();
 			}
@@ -87,10 +91,6 @@ void external::MessageOptionControl_Destroy(void* actualInstance)
 
 void external::MessageOrStatusView_Destroy()
 {
-	if (bIsInMessageView)
-	{
-		bIsInMessageView = false;
-	}
 }
 
 void MessageOptionControlWrapper::Press()

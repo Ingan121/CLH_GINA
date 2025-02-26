@@ -14,6 +14,7 @@ public:
 	static void Destroy();
 	static void Show();
 	static void Hide();
+	static void UpdateText();
 	static void BeginMessageLoop();
 	static int CALLBACK DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 };

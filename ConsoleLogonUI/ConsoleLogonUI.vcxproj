@@ -277,6 +277,7 @@
     <ClInclude Include="ui\wallhost.h" />
     <ClInclude Include="util\interop.h" />
     <ClInclude Include="util\util.h" />
+    <ClInclude Include="util\winsta.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="spdlog\fmt\bundled\fmt.license.rst" />

@@ -77,36 +77,6 @@ static std::wstring GetDomainName()
 	return domain;
 }
 
-static std::wstring GetLogonName()
-{
-    wchar_t username[UNLEN + 1];
-    DWORD username_len = UNLEN + 1;
-    if (GetUserNameW(username, &username_len))
-    {
-		return GetDomainName() + L"\\" + std::wstring(username);
-    }
-    return L"";
-}
-
-static std::wstring GetLogonTime()
-{
-    wchar_t username[UNLEN + 1];
-    DWORD username_len = UNLEN + 1;
-    if (GetUserNameW(username, &username_len))
-    {
-        LPUSER_INFO_2 pBuf = NULL;
-        NET_API_STATUS nStatus = NetUserGetInfo(NULL, username, 2, (LPBYTE*)&pBuf);
-        if (nStatus == NERR_Success)
-        {
-            time_t logonTime = static_cast<time_t>(pBuf->usri2_last_logon);
-            std::wstring logonTimeStr = _wctime(&logonTime);
-            NetApiBufferFree(pBuf);
-            return logonTimeStr;
-        }
-    }
-    return L"";
-}
-
 static void CenterWindow(HWND hWnd)
 {
 	RECT rc;
@@ -115,3 +85,7 @@ static void CenterWindow(HWND hWnd)
 	int yPos = (GetSystemMetrics(SM_CYSCREEN) - rc.bottom) / 2;
 	SetWindowPos(hWnd, 0, xPos, yPos, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 }
+
+DWORD GetLoggedOnUserInfo(LPWSTR lpUsername, UINT cchUsernameMax, LPWSTR lpDomain, UINT cchDomainMax);
+bool GetUserLogonTime(LPSYSTEMTIME lpSystemTime);
+bool IsSystemUser(void);
