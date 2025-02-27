@@ -154,6 +154,7 @@
     <ClCompile Include="ui\gina_messageview.cpp" />
     <ClCompile Include="ui\gina_securitycontrol.cpp" />
     <ClCompile Include="ui\gina_selectedcredentialview.cpp" />
+    <ClCompile Include="ui\gina_shutdownview.cpp" />
     <ClCompile Include="ui\gina_statusview.cpp" />
     <ClCompile Include="ui\gina_userselect.cpp" />
     <ClCompile Include="ui\wallhost.cpp" />
@@ -271,6 +272,7 @@
     <ClInclude Include="ui\gina_messageview.h" />
     <ClInclude Include="ui\gina_securitycontrol.h" />
     <ClInclude Include="ui\gina_selectedcredentialview.h" />
+    <ClInclude Include="ui\gina_shutdownview.h" />
     <ClInclude Include="ui\gina_statusview.h" />
     <ClInclude Include="ui\gina_userselect.h" />
     <ClInclude Include="ui\ui_sink.h" />

@@ -42,6 +42,9 @@
     <ClCompile Include="ui\wallhost.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ui\gina_shutdownview.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="spdlog\cfg\argv.h">
@@ -396,6 +399,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="util\winsta.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ui\gina_shutdownview.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

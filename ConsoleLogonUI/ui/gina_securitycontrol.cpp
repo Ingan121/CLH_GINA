@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include "gina_securitycontrol.h"
+#include "gina_shutdownview.h"
 #include "util/util.h"
 #include "util/interop.h"
 #include <thread>
@@ -19,7 +20,9 @@ void external::SecurityControlButtonsList_Clear()
 
 void external::SecurityControl_SetActive()
 {
-    //HideConsoleUI();
+#ifndef SHOWCONSOLE
+	HideConsoleUI();
+#endif
     buttonsList.clear();
 }
 
@@ -124,15 +127,16 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		}
 		else if (LOWORD(wParam) == IDC_SECURITY_LOGOFF)
 		{
-			buttonsList[buttonsList.size() - 1].Press();
-			ExitWindowsEx(EWX_LOGOFF, 0);
 			//buttonsList[2].Press(); // makes the system hang for some reason
+			ginaLogoffView::Create();
+			ginaLogoffView::Show();
+			ginaLogoffView::BeginMessageLoop();
 		}
 		else if (LOWORD(wParam) == IDC_SECURITY_SHUTDOWN)
 		{
-			//system("shutdown /s /t 0");
-			// TODO!
-			MessageBoxW(hWnd, L"Shutdown button clicked", L"Info", MB_OK | MB_ICONINFORMATION);
+			ginaShutdownView::Create();
+			ginaShutdownView::Show();
+			ginaShutdownView::BeginMessageLoop();
 		}
 		else if (LOWORD(wParam) == IDC_SECURITY_CHANGEPWD)
 		{

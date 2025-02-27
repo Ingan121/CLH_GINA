@@ -1,5 +1,6 @@
 #pragma once
 #include "gina_selectedcredentialview.h"
+#include "gina_shutdownview.h"
 #include <vector>
 #include "../util/util.h"
 #include "../util/interop.h"
@@ -26,7 +27,9 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 	}
 
 	std::lock_guard<std::mutex> lock(credentialViewMutex);
-	//HideConsoleUI();
+#ifndef SHOWCONSOLE
+		HideConsoleUI();
+#endif
 
 	g_accountName = accountNameToDisplay;
 
@@ -56,9 +59,18 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 		else {
 			ginaManager::Get()->CloseAllDialogs();
 			
-			ginaSelectedCredentialView::Get()->Create();
-			ginaSelectedCredentialView::Get()->Show();
-			ginaSelectedCredentialView::Get()->BeginMessageLoop();
+			if (IsSystemUser())
+			{
+				ginaSelectedCredentialView::Get()->Create();
+				ginaSelectedCredentialView::Get()->Show();
+				ginaSelectedCredentialView::Get()->BeginMessageLoop();
+			}
+			else
+			{
+				ginaSelectedCredentialViewLocked::Get()->Create();
+				ginaSelectedCredentialViewLocked::Get()->Show();
+				ginaSelectedCredentialViewLocked::Get()->BeginMessageLoop();
+			}
 			isCredentialViewActive = false;
 		}
 	}).detach();
@@ -117,7 +129,16 @@ void ginaSelectedCredentialView::Create()
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaSelectedCredentialView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT), 0, (DLGPROC)DlgProc, 0);
 	if (ginaSelectedCredentialView::Get()->hDlg != NULL) {
-		SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, IDC_CREDVIEW_USERNAME, g_accountName.c_str());
+		if (IsFriendlyLogonUI())
+		{
+			SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, IDC_CREDVIEW_USERNAME, g_accountName.c_str());
+		}
+		else
+		{
+			wchar_t username[256];
+			GetLastLogonUser(username, 256);
+			SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, IDC_CREDVIEW_USERNAME, username);
+		}
 	}
 }
 
@@ -225,7 +246,10 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		}
 
 		// DIsable the Cancel button
-		//EnableWindow(hCancel, FALSE);
+		if (!IsFriendlyLogonUI())
+		{
+			EnableWindow(hCancel, FALSE);
+		}
 
 		ginaManager* manager = ginaManager::Get();
 		HMODULE hGinaDll = manager->hGinaDll;
@@ -246,8 +270,18 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 			// OK button
 			wchar_t username[256];
 			wchar_t password[256];
-			GetDlgItemTextW(hWnd, 1502, username, 256);
-			GetDlgItemTextW(hWnd, 1503, password, 256);
+			GetDlgItemTextW(hWnd, IDC_CREDVIEW_USERNAME, username, 256);
+			GetDlgItemTextW(hWnd, IDC_CREDVIEW_PASSWORD, password, 256);
+
+			if (IsFriendlyLogonUI() && wcscmp(username, g_accountName.c_str()) != 0)
+			{
+				// Go to user select view
+				KEY_EVENT_RECORD rec;
+				rec.wVirtualKeyCode = VK_ESCAPE;
+				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+				return 0;
+			}
+
 			editControls[0].SetInputtedText(username);
 			editControls[1].SetInputtedText(password);
 
@@ -265,7 +299,9 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		else if (LOWORD(wParam) == IDC_CREDVIEW_SHUTDOWN)
 		{
 			// Shutdown button
-			MessageBoxW(hWnd, L"Shutdown button clicked", L"Info", MB_OK | MB_ICONINFORMATION);
+			ginaShutdownView::Get()->Create(hWnd);
+			ginaShutdownView::Get()->Show();
+			ginaShutdownView::Get()->BeginMessageLoop();
 		}
 		else if (LOWORD(wParam) == IDC_CREDVIEW_OPTIONS)
 		{
@@ -336,6 +372,192 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 	case WM_CLOSE:
 	{
 		EndDialog(hWnd, 0);
+		break;
+	}
+	case WM_DESTROY:
+	{
+		PostQuitMessage(0); // Trigger exit thread
+		break;
+	}
+	}
+	return 0;
+}
+
+ginaSelectedCredentialViewLocked* ginaSelectedCredentialViewLocked::Get()
+{
+	static ginaSelectedCredentialViewLocked dlg;
+	return &dlg;
+}
+
+void ginaSelectedCredentialViewLocked::Create()
+{
+	HINSTANCE hInstance = ginaManager::Get()->hInstance;
+	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
+	ginaSelectedCredentialViewLocked::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT_LOCKED), 0, (DLGPROC)DlgProc, 0);
+	if (ginaSelectedCredentialViewLocked::Get()->hDlg != NULL) {
+		WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
+		WCHAR szFormat[256], szText[1024];
+		GetLoggedOnUserInfo(_wszUserName, MAX_PATH, _wszDomainName, MAX_PATH);
+		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_LOGON_NAME, szFormat, 256);
+		swprintf_s(szText, szFormat, _wszDomainName, _wszUserName);
+		SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME_INFO, szText);
+		SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME, _wszUserName);
+	}
+}
+
+void ginaSelectedCredentialViewLocked::Destroy()
+{
+	ginaSelectedCredentialViewLocked* dlg = ginaSelectedCredentialViewLocked::Get();
+	EndDialog(dlg->hDlg, 0);
+	PostMessage(dlg->hDlg, WM_DESTROY, 0, 0);
+}
+
+void ginaSelectedCredentialViewLocked::Show()
+{
+	ginaSelectedCredentialViewLocked* dlg = ginaSelectedCredentialViewLocked::Get();
+	CenterWindow(dlg->hDlg);
+	ShowWindow(dlg->hDlg, SW_SHOW);
+	UpdateWindow(dlg->hDlg);
+}
+
+void ginaSelectedCredentialViewLocked::Hide()
+{
+	ginaSelectedCredentialViewLocked* dlg = ginaSelectedCredentialViewLocked::Get();
+	ShowWindow(dlg->hDlg, SW_HIDE);
+}
+
+void ginaSelectedCredentialViewLocked::BeginMessageLoop()
+{
+	ginaSelectedCredentialViewLocked* dlg = ginaSelectedCredentialViewLocked::Get();
+	MSG msg;
+	while (GetMessageW(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessageW(&msg);
+	}
+}
+
+int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_INITDIALOG:
+	{
+		RECT dlgRect;
+		GetWindowRect(hWnd, &dlgRect);
+		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&dlgRect, 2);
+		int dlgHeightToReduce = 0;
+		int bottomBtnYToMove = 0;
+
+		HWND hIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_ICON);
+		SendMessageW(hIcon, STM_SETICON, (WPARAM)LoadIconW(ginaManager::Get()->hGinaDll, MAKEINTRESOURCEW(IDI_LOCKED)), 0);
+
+		// Hide the domain chooser
+		HWND hDomainChooser = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_DOMAIN);
+		HWND hDomainChooserLabel = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_DOMAIN_LABEL);
+		RECT domainRect;
+		GetWindowRect(hDomainChooser, &domainRect);
+		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&domainRect, 2);
+		ShowWindow(hDomainChooser, SW_HIDE);
+		ShowWindow(hDomainChooserLabel, SW_HIDE);
+		dlgHeightToReduce = domainRect.bottom - domainRect.top + 8;
+		bottomBtnYToMove = domainRect.bottom - domainRect.top + 8;
+
+		// Hide the options button and move the OK and Cancel buttons right
+		HWND hOptions = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_OPTIONS);
+		RECT optionsRect;
+		GetWindowRect(hOptions, &optionsRect);
+		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&optionsRect, 2);
+		ShowWindow(hOptions, SW_HIDE);
+		HWND hOK = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_OK);
+		HWND hCancel = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_CANCEL);
+		RECT okRect, cancelRect;
+		GetWindowRect(hOK, &okRect);
+		GetWindowRect(hCancel, &cancelRect);
+		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&okRect, 2);
+		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&cancelRect, 2);
+
+		// Move the OK and Cancel buttons appropriately
+		SetWindowPos(hOK, NULL, okRect.left + optionsRect.right - optionsRect.left, okRect.top - bottomBtnYToMove, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+		SetWindowPos(hCancel, NULL, cancelRect.left + optionsRect.right - optionsRect.left, cancelRect.top - bottomBtnYToMove, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+
+		SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
+
+		// Load branding and bar images
+		ginaManager::Get()->LoadBranding(hWnd, FALSE);
+		break;
+	}
+	case WM_COMMAND:
+	{
+		if (LOWORD(wParam) == IDC_CREDVIEW_LOCKED_OK)
+		{
+			// OK button
+			wchar_t username[256];
+			wchar_t password[256];
+			GetDlgItemTextW(hWnd, IDC_CREDVIEW_LOCKED_USERNAME, username, 256);
+			GetDlgItemTextW(hWnd, IDC_CREDVIEW_LOCKED_PASSWORD, password, 256);
+
+			if (wcscmp(username, g_accountName.c_str()) != 0)
+			{
+				// Go to user select view
+				KEY_EVENT_RECORD rec;
+				rec.wVirtualKeyCode = VK_ESCAPE;
+				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+				return 0;
+			}
+
+			editControls[0].SetInputtedText(username);
+			editControls[1].SetInputtedText(password);
+
+			KEY_EVENT_RECORD rec;
+			rec.wVirtualKeyCode = VK_RETURN; //forward it to consoleuiview
+			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+		}
+		else if (LOWORD(wParam) == IDC_CREDVIEW_LOCKED_CANCEL)
+		{
+			// Cancel button
+			KEY_EVENT_RECORD rec;
+			rec.wVirtualKeyCode = VK_ESCAPE; //forward it to consoleuiview
+			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+		}
+		break;
+	}
+	case WM_KEYDOWN:
+	{
+		if (wParam == VK_RETURN)
+		{
+			// Handle Enter key
+			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_LOCKED_OK, BN_CLICKED), 0);
+		}
+		else if (wParam == VK_ESCAPE)
+		{
+			// Handle Esc key
+			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_LOCKED_CANCEL, BN_CLICKED), 0);
+		}
+		break;
+	}
+	case WM_ERASEBKGND:
+	{
+		HDC hdc = (HDC)wParam;
+		RECT rect;
+		GetClientRect(hWnd, &rect);
+		int origBottom = rect.bottom;
+		rect.bottom = GINA_SMALL_BRD_HEIGHT;
+#ifdef XP
+		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
+#else
+		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
+#endif
+		FillRect(hdc, &rect, hBrush);
+		DeleteObject(hBrush);
+		rect.bottom = origBottom;
+		rect.top = GINA_SMALL_BRD_HEIGHT + GINA_BAR_HEIGHT;
+		COLORREF btnFace;
+		btnFace = GetSysColor(COLOR_BTNFACE);
+		hBrush = CreateSolidBrush(btnFace);
+		FillRect(hdc, &rect, hBrush);
+		DeleteObject(hBrush);
+		return 1;
 		break;
 	}
 	case WM_DESTROY:
@@ -424,11 +646,6 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 			// Cancel button
 			EndDialog(hWnd, 0);
 		}
-		break;
-	}
-	case WM_CLOSE:
-	{
-		EndDialog(hWnd, 0);
 		break;
 	}
 	case WM_DESTROY:

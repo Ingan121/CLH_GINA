@@ -61,6 +61,31 @@ DWORD GetLoggedOnUserInfo(LPWSTR lpUsername, UINT cchUsernameMax, LPWSTR lpDomai
 	return sessionId;
 }
 
+int GetLastLogonUser(LPWSTR lpUsername, UINT cchUsernameMax)
+{
+    HKEY hKey;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\LogonUI", 0, KEY_READ, &hKey) != ERROR_SUCCESS)
+        return -1;
+
+    WCHAR szLastLoggedOnUser[512];
+    DWORD dwSize = sizeof(szLastLoggedOnUser);
+    if (RegQueryValueExW(hKey, L"LastLoggedOnUser", NULL, NULL, (LPBYTE)szLastLoggedOnUser, &dwSize) != ERROR_SUCCESS)
+    {
+        RegCloseKey(hKey);
+        return -1;
+    }
+    RegCloseKey(hKey);
+
+    LPWSTR pszDomain = wcschr(szLastLoggedOnUser, L'\\');
+	if (!pszDomain)
+		return -1;
+
+	*pszDomain = L'\0';
+	wcscpy_s(lpUsername, cchUsernameMax, pszDomain + 1);
+
+    return 0;
+}
+
 bool GetUserLogonTime(LPSYSTEMTIME lpSystemTime)
 {
 	if (!lpSystemTime)

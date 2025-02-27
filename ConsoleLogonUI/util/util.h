@@ -87,5 +87,7 @@ static void CenterWindow(HWND hWnd)
 }
 
 DWORD GetLoggedOnUserInfo(LPWSTR lpUsername, UINT cchUsernameMax, LPWSTR lpDomain, UINT cchDomainMax);
+int GetLastLogonUser(LPWSTR lpUsername, UINT cchUsernameMax);
 bool GetUserLogonTime(LPSYSTEMTIME lpSystemTime);
 bool IsSystemUser(void);
+bool IsFriendlyLogonUI(void);

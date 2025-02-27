@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include "gina_userselect.h"
+#include "gina_shutdownview.h"
 #include "../util/util.h"
 #include "util/interop.h"
 #include <thread>
@@ -19,7 +20,9 @@ HWND g_hUsernameCombo = NULL;
 
 void external::UserSelect_SetActive()
 {
-	//HideConsoleUI();
+#ifndef SHOWCONSOLE
+	HideConsoleUI();
+#endif
 }
 
 void external::SelectableUserOrCredentialControl_Sort()
@@ -176,7 +179,7 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 		// Add users to the combo box
 		g_hUsernameCombo = CreateWindowExW(0, L"COMBOBOX", L"UserSelect", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP, usernameRect.left, usernameRect.top, usernameRect.right - usernameRect.left, usernameRect.bottom - usernameRect.top, hWnd, (HMENU)IDC_CREDVIEW_USERNAME, NULL, NULL);
-		for (int i = 0; i < buttons.size(); i++)
+		for (int i = buttons.size() - 1; i >= 0; i--)
 		{
 			SendMessageW(g_hUsernameCombo, CB_ADDSTRING, 0, (LPARAM)buttons[i].GetText().c_str());
 		}
@@ -249,8 +252,9 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		if (LOWORD(wParam) == IDC_CREDVIEW_OK)
 		{
 			// OK button
+			int total = buttons.size();
 			int index = SendMessageW(g_hUsernameCombo, CB_GETCURSEL, 0, 0);
-			buttons[index].Press();
+			buttons[total - index - 1].Press();
 		}
 		else if (LOWORD(wParam) == IDC_CREDVIEW_CANCEL)
 		{
@@ -259,7 +263,9 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		else if (LOWORD(wParam) == IDC_CREDVIEW_SHUTDOWN)
 		{
 			// Shutdown button
-			MessageBoxW(hWnd, L"Shutdown button clicked", L"Info", MB_OK | MB_ICONINFORMATION);
+			ginaShutdownView::Get()->Create(hWnd);
+			ginaShutdownView::Get()->Show();
+			ginaShutdownView::Get()->BeginMessageLoop();
 		}
 		else if (LOWORD(wParam) == IDC_CREDVIEW_OPTIONS)
 		{

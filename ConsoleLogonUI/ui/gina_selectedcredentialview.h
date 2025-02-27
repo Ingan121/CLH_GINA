@@ -17,6 +17,19 @@
 #define IDC_CREDVIEW_LEGAL 2400
 #define IDC_CREDVIEW_LANGUAGE 2406
 
+#define IDC_CREDVIEW_LOCKED_ICON 2404
+#define IDC_CREDVIEW_LOCKED_USERNAME_INFO 1952
+#define IDC_CREDVIEW_LOCKED_USERNAME 1953
+#define IDC_CREDVIEW_LOCKED_PASSWORD 1954
+#define IDC_CREDVIEW_LOCKED_DOMAIN 1956
+#define IDC_CREDVIEW_LOCKED_DOMAIN_LABEL 1957
+#define IDC_CREDVIEW_LOCKED_OK 1
+#define IDC_CREDVIEW_LOCKED_CANCEL 2
+#define IDC_CREDVIEW_LOCKED_OPTIONS 2401
+#define IDC_CREDVIEW_LOCKED_LANGUAGE 2406
+
+#define IDI_LOCKED 115
+
 #define IDC_CHPW_USERNAME 1702
 #define IDC_CHPW_USERNAME_LABEL 1701
 #define IDC_CHPW_DOMAIN 1704
@@ -33,6 +46,7 @@
 
 #define GINA_STR_OPTBTN_EXPAND 1800
 #define GINA_STR_OPTBTN_COLLAPSE 1801
+#define GINA_STR_CREDVIEW_LOCKED_USERNAME_INFO 1500
 
 struct EditControlWrapper
 {
@@ -51,6 +65,19 @@ class ginaSelectedCredentialView
 public:
 	HWND hDlg;
 	static ginaSelectedCredentialView* Get();
+	static void Create();
+	static void Destroy();
+	static void Show();
+	static void Hide();
+	static void BeginMessageLoop();
+	static int CALLBACK DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+};
+
+class ginaSelectedCredentialViewLocked
+{
+public:
+	HWND hDlg;
+	static ginaSelectedCredentialViewLocked* Get();
 	static void Create();
 	static void Destroy();
 	static void Show();

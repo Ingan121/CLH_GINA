@@ -19,7 +19,9 @@ std::mutex messageViewMutex;
 void external::MessageView_SetActive()
 {
 	std::lock_guard<std::mutex> lock(messageViewMutex);
-	//HideConsoleUI();
+#ifndef SHOWCONSOLE
+	HideConsoleUI();
+#endif
 
 	std::thread([=] {
 		if (isMessageViewActive.exchange(true)) {

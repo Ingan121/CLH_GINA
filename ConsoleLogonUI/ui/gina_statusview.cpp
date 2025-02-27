@@ -19,7 +19,9 @@ void external::StatusView_SetActive(const wchar_t* text)
 	}
 
 	std::lock_guard<std::mutex> lock(statusViewMutex);
-	//HideConsoleUI();
+#ifndef SHOWCONSOLE
+	HideConsoleUI();
+#endif
 
 	ginaManager::Get()->CloseAllDialogs();
 
@@ -141,11 +143,6 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		return 1;
-		break;
-	}
-	case WM_CLOSE:
-	{
-		EndDialog(hWnd, 0);
 		break;
 	}
 	case WM_DESTROY:
