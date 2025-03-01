@@ -12,8 +12,6 @@ std::vector<EditControlWrapper> editControls;
 
 std::wstring g_accountName;
 
-std::atomic<bool> isCredentialViewActive(false);
-std::atomic<bool> isChangePwdViewActive(false);
 std::mutex credentialViewMutex;
 
 void external::NotifyWasInSelectedCredentialView()
@@ -35,26 +33,28 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 
 	std::thread([=] {
 		if (flag == 2) {
-			if (isChangePwdViewActive.exchange(true)) {
+			if (ginaChangePwdView::Get()->isActive.exchange(true)) {
 				return;
 			}
 		}
 		else {
-			if (isCredentialViewActive.exchange(true)) {
-				return;
+			if (IsSystemUser()) {
+				if (ginaSelectedCredentialView::Get()->isActive.exchange(true)) {
+					return;
+				}
+			}
+			else {
+				if (ginaSelectedCredentialViewLocked::Get()->isActive.exchange(true)) {
+					return;
+				}
 			}
 		}
-
-		/*wchar_t msg[256], username[256], domain[256];
-		GetLoggedOnUserInfo(username, 256, domain, 256);
-		wsprintf(msg, L"User: %s\\%s, isSystem: %d", domain, username, IsSystemUser());
-		MessageBoxW(0, msg, L"Info", MB_OK | MB_ICONINFORMATION);*/
 
 		if (flag == 2) {
 			ginaChangePwdView::Get()->Create();
 			ginaChangePwdView::Get()->Show();
 			ginaChangePwdView::Get()->BeginMessageLoop();
-			isChangePwdViewActive = false;
+			ginaChangePwdView::Get()->isActive = false;
 		}
 		else {
 			ginaManager::Get()->CloseAllDialogs();
@@ -64,14 +64,15 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 				ginaSelectedCredentialView::Get()->Create();
 				ginaSelectedCredentialView::Get()->Show();
 				ginaSelectedCredentialView::Get()->BeginMessageLoop();
+				ginaSelectedCredentialView::Get()->isActive = false;
 			}
 			else
 			{
 				ginaSelectedCredentialViewLocked::Get()->Create();
 				ginaSelectedCredentialViewLocked::Get()->Show();
 				ginaSelectedCredentialViewLocked::Get()->BeginMessageLoop();
+				ginaSelectedCredentialViewLocked::Get()->isActive = false;
 			}
-			isCredentialViewActive = false;
 		}
 	}).detach();
 }
@@ -128,6 +129,9 @@ void ginaSelectedCredentialView::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaSelectedCredentialView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT), 0, (DLGPROC)DlgProc, 0);
+#ifdef CLASSIC
+	MakeWindowClassic(ginaSelectedCredentialView::Get()->hDlg);
+#endif
 	if (ginaSelectedCredentialView::Get()->hDlg != NULL) {
 		if (IsFriendlyLogonUI())
 		{
@@ -231,8 +235,8 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		bottomBtnYToMove += dialupRect.bottom - dialupRect.top;
 
 		// Move the OK, Cancel, Shutdown, Options, and language icon controls up
-		HWND hOK = GetDlgItem(hWnd, IDC_CREDVIEW_OK);
-		HWND hCancel = GetDlgItem(hWnd, IDC_CREDVIEW_CANCEL);
+		HWND hOK = GetDlgItem(hWnd, IDC_OK);
+		HWND hCancel = GetDlgItem(hWnd, IDC_CANCEL);
 		HWND hShutdown = GetDlgItem(hWnd, IDC_CREDVIEW_SHUTDOWN);
 		HWND hOptions = GetDlgItem(hWnd, IDC_CREDVIEW_OPTIONS);
 		HWND hLanguageIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LANGUAGE);
@@ -265,7 +269,7 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 	}
 	case WM_COMMAND:
 	{
-		if (LOWORD(wParam) == IDC_CREDVIEW_OK)
+		if (LOWORD(wParam) == IDC_OK)
 		{
 			// OK button
 			wchar_t username[256];
@@ -289,7 +293,7 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 			rec.wVirtualKeyCode = VK_RETURN; //forward it to consoleuiview
 			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 		}
-		else if (LOWORD(wParam) == IDC_CREDVIEW_CANCEL)
+		else if (LOWORD(wParam) == IDC_CANCEL)
 		{
 			// Cancel button
 			KEY_EVENT_RECORD rec;
@@ -299,9 +303,7 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		else if (LOWORD(wParam) == IDC_CREDVIEW_SHUTDOWN)
 		{
 			// Shutdown button
-			ginaShutdownView::Get()->Create(hWnd);
-			ginaShutdownView::Get()->Show();
-			ginaShutdownView::Get()->BeginMessageLoop();
+			ShowShutdownDialog(hWnd);
 		}
 		else if (LOWORD(wParam) == IDC_CREDVIEW_OPTIONS)
 		{
@@ -331,20 +333,6 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		}
 		break;
 	}
-    case WM_KEYDOWN:
-    {
-        if (wParam == VK_RETURN)
-        {
-            // Handle Enter key
-            SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_OK, BN_CLICKED), 0);
-        }
-        else if (wParam == VK_ESCAPE)
-        {
-            // Handle Esc key
-            SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_CANCEL, BN_CLICKED), 0);
-        }
-        break;
-    }
 	case WM_ERASEBKGND:
 	{
 		HDC hdc = (HDC)wParam;
@@ -394,12 +382,15 @@ void ginaSelectedCredentialViewLocked::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaSelectedCredentialViewLocked::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT_LOCKED), 0, (DLGPROC)DlgProc, 0);
+#ifdef CLASSIC
+	MakeWindowClassic(ginaSelectedCredentialViewLocked::Get()->hDlg);
+#endif
 	if (ginaSelectedCredentialViewLocked::Get()->hDlg != NULL) {
 		WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
 		WCHAR szFormat[256], szText[1024];
 		GetLoggedOnUserInfo(_wszUserName, MAX_PATH, _wszDomainName, MAX_PATH);
-		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_LOGON_NAME, szFormat, 256);
-		swprintf_s(szText, szFormat, _wszDomainName, _wszUserName);
+		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_CREDVIEW_LOCKED_USERNAME_INFO, szFormat, 256);
+		swprintf_s(szText, szFormat, _wszDomainName, _wszUserName, _wszUserName);
 		SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME_INFO, szText);
 		SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME, _wszUserName);
 	}
@@ -469,8 +460,8 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		GetWindowRect(hOptions, &optionsRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&optionsRect, 2);
 		ShowWindow(hOptions, SW_HIDE);
-		HWND hOK = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_OK);
-		HWND hCancel = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_CANCEL);
+		HWND hOK = GetDlgItem(hWnd, IDC_OK);
+		HWND hCancel = GetDlgItem(hWnd, IDC_CANCEL);
 		RECT okRect, cancelRect;
 		GetWindowRect(hOK, &okRect);
 		GetWindowRect(hCancel, &cancelRect);
@@ -489,7 +480,7 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 	}
 	case WM_COMMAND:
 	{
-		if (LOWORD(wParam) == IDC_CREDVIEW_LOCKED_OK)
+		if (LOWORD(wParam) == IDC_OK)
 		{
 			// OK button
 			wchar_t username[256];
@@ -513,26 +504,12 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 			rec.wVirtualKeyCode = VK_RETURN; //forward it to consoleuiview
 			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 		}
-		else if (LOWORD(wParam) == IDC_CREDVIEW_LOCKED_CANCEL)
+		else if (LOWORD(wParam) == IDC_CANCEL)
 		{
 			// Cancel button
 			KEY_EVENT_RECORD rec;
 			rec.wVirtualKeyCode = VK_ESCAPE; //forward it to consoleuiview
 			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
-		}
-		break;
-	}
-	case WM_KEYDOWN:
-	{
-		if (wParam == VK_RETURN)
-		{
-			// Handle Enter key
-			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_LOCKED_OK, BN_CLICKED), 0);
-		}
-		else if (wParam == VK_ESCAPE)
-		{
-			// Handle Esc key
-			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_LOCKED_CANCEL, BN_CLICKED), 0);
 		}
 		break;
 	}
@@ -580,9 +557,9 @@ void ginaChangePwdView::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaChangePwdView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_CHANGE_PWD), 0, (DLGPROC)DlgProc, 0);
-	if (ginaChangePwdView::Get()->hDlg != NULL) {
-		SetDlgItemTextW(ginaChangePwdView::Get()->hDlg, IDC_CHPW_USERNAME, g_accountName.c_str());
-	}
+#ifdef CLASSIC
+	MakeWindowClassic(ginaChangePwdView::Get()->hDlg);
+#endif
 }
 
 void ginaChangePwdView::Destroy()
@@ -622,10 +599,11 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 	{
 	case WM_INITDIALOG:
 	{
-		HWND hDomainChooser = GetDlgItem(hWnd, IDC_CHPW_DOMAIN);
-		EnableWindow(hDomainChooser, FALSE);
-		std::wstring domain = GetDomainName();
-		SetDlgItemTextW(hWnd, IDC_CHPW_DOMAIN, domain.c_str());
+		wchar_t lpUsername[256], lpDomain[256];
+		GetLoggedOnUserInfo(lpUsername, 256, lpDomain, 256);
+		SetDlgItemTextW(hWnd, IDC_CHPW_USERNAME, lpUsername);
+		EnableWindow(GetDlgItem(hWnd, IDC_CHPW_DOMAIN), FALSE);
+		SetDlgItemTextW(hWnd, IDC_CHPW_DOMAIN, lpDomain);
 		break;
 	}
 	case WM_COMMAND:
@@ -634,17 +612,29 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		{
 			// OK button
 			wchar_t username[256];
-			wchar_t password[256];
+			wchar_t oldPassword[256];
+			wchar_t newPassword[256];
+			wchar_t confirmPassword[256];
 			GetDlgItemTextW(hWnd, IDC_CHPW_USERNAME, username, 256);
-			GetDlgItemTextW(hWnd, IDC_CHPW_OLD_PASSWORD, password, 256);
-			wchar_t msg[256];
-			wsprintfW(msg, L"Username: %s, Password: %s", username, password);
-			MessageBoxW(hWnd, msg, L"Info", MB_OK | MB_ICONINFORMATION);
+			GetDlgItemTextW(hWnd, IDC_CHPW_OLD_PASSWORD, oldPassword, 256);
+			GetDlgItemTextW(hWnd, IDC_CHPW_NEW_PASSWORD, newPassword, 256);
+			GetDlgItemTextW(hWnd, IDC_CHPW_CONFIRM_PASSWORD, confirmPassword, 256);
+			
+			editControls[0].SetInputtedText(username);
+			editControls[1].SetInputtedText(oldPassword);
+			editControls[2].SetInputtedText(newPassword);
+			editControls[3].SetInputtedText(confirmPassword);
+
+			KEY_EVENT_RECORD rec;
+			rec.wVirtualKeyCode = VK_RETURN; //forward it to consoleuiview
+			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 		}
 		else if (LOWORD(wParam) == 2)
 		{
 			// Cancel button
-			EndDialog(hWnd, 0);
+			KEY_EVENT_RECORD rec;
+			rec.wVirtualKeyCode = VK_ESCAPE; //forward it to consoleuiview
+			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 		}
 		break;
 	}

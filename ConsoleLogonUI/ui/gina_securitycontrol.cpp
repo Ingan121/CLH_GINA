@@ -10,7 +10,6 @@
 
 std::vector<SecurityOptionControlWrapper> buttonsList;
 
-std::atomic<bool> isSecurityControlActive(false);
 std::mutex securityControlMutex;
 
 void external::SecurityControlButtonsList_Clear()
@@ -21,7 +20,9 @@ void external::SecurityControlButtonsList_Clear()
 void external::SecurityControl_SetActive()
 {
 #ifndef SHOWCONSOLE
-	HideConsoleUI();
+	if (ginaManager::Get()->hGinaDll) {
+		HideConsoleUI();
+	}
 #endif
     buttonsList.clear();
 }
@@ -33,9 +34,10 @@ void external::SecurityControl_ButtonsReady()
 	}
 
 	std::lock_guard<std::mutex> lock(securityControlMutex);
+	ginaManager::Get()->CloseAllDialogs();
 
 	std::thread([=] {
-		if (isSecurityControlActive.exchange(true)) {
+		if (ginaSecurityControl::Get()->isActive.exchange(true)) {
 			return;
 		}
 
@@ -44,7 +46,7 @@ void external::SecurityControl_ButtonsReady()
 		ginaSecurityControl::Get()->Create();
 		ginaSecurityControl::Get()->Show();
 		ginaSecurityControl::Get()->BeginMessageLoop();
-		isSecurityControlActive = false;
+		ginaSecurityControl::Get()->isActive = false;
 	}).detach();
 }
 
@@ -59,6 +61,9 @@ void ginaSecurityControl::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaSecurityControl::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_SECURITY_CONTROL), 0, (DLGPROC)DlgProc, 0);
+#ifdef CLASSIC
+	MakeWindowClassic(ginaSecurityControl::Get()->hDlg);
+#endif
 }
 
 void ginaSecurityControl::Destroy()
@@ -86,7 +91,7 @@ void ginaSecurityControl::BeginMessageLoop()
 {
 	ginaSecurityControl* dlg = ginaSecurityControl::Get();
 	MSG msg;
-	while (GetMessageW(&msg, dlg->hDlg, 0, 0))
+	while (GetMessageW(&msg, NULL, 0, 0))
 	{
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
@@ -99,14 +104,14 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 	{
 	case WM_INITDIALOG:
 	{
-		ginaStatusView::Get()->Destroy();
+		ginaManager::Get()->CloseAllDialogs();
 		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 
 		WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
 		WCHAR szFormat[256], szText[1024];
 		GetLoggedOnUserInfo(_wszUserName, MAX_PATH, _wszDomainName, MAX_PATH);
 		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_LOGON_NAME, szFormat, 256);
-		swprintf_s(szText, szFormat, _wszDomainName, _wszUserName);
+		swprintf_s(szText, szFormat, _wszUserName, _wszDomainName, _wszUserName);
 		SetDlgItemTextW(hWnd, IDC_SECURITY_LOGONNAME, szText);
 
 		SYSTEMTIME _logonTime;
@@ -128,15 +133,24 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		else if (LOWORD(wParam) == IDC_SECURITY_LOGOFF)
 		{
 			//buttonsList[2].Press(); // makes the system hang for some reason
-			ginaLogoffView::Create();
-			ginaLogoffView::Show();
-			ginaLogoffView::BeginMessageLoop();
+			ShowLogoffDialog(hWnd);
 		}
 		else if (LOWORD(wParam) == IDC_SECURITY_SHUTDOWN)
 		{
-			ginaShutdownView::Create();
-			ginaShutdownView::Show();
-			ginaShutdownView::BeginMessageLoop();
+			if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
+			{
+				wchar_t title[256], desc[256];
+				LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_EMERGENCY_RESTART_TITLE, title, 256);
+				LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_EMERGENCY_RESTART_DESC, desc, 256);
+				if (MessageBoxW(hWnd, desc, title, MB_YESNO | MB_ICONERROR) == IDYES)
+				{
+					EmergencyRestart();
+				}
+			}
+			else
+			{
+				ShowShutdownDialog(hWnd);
+			}
 		}
 		else if (LOWORD(wParam) == IDC_SECURITY_CHANGEPWD)
 		{
@@ -151,7 +165,7 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		{
 			buttonsList[buttonsList.size() - 2].Press();
 		}
-		else if (LOWORD(wParam) == IDC_SECURITY_CANCEL)
+		else if (LOWORD(wParam) == IDC_CANCEL)
 		{
 			buttonsList[buttonsList.size() - 1].Press();
 		}

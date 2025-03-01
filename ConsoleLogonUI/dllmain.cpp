@@ -10,7 +10,7 @@ extern "C" __declspec(dllexport) void InitUI()
 {
     external::InitExternal();
 	ginaManager::Get()->LoadGina();
-	wallHost::Create();
+	InitWallHost();
 }
 
 BOOL APIENTRY DllMain( HMODULE hModule,

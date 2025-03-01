@@ -6,13 +6,9 @@
 #define IDC_SHUTDOWN_ICON 22
 #define IDC_SHUTDOWN_COMBO 2201
 #define IDC_SHUTDOWN_DESC 2202
-#define IDC_SHUTDOWN_OK 1
-#define IDC_SHUTDOWN_CANCEL 2
 #define IDC_SHUTDOWN_HELP 9
 
 #define IDC_LOGOFF_ICON 21
-#define IDC_LOGOFF_OK 1
-#define IDC_LOGOFF_CANCEL 2
 
 #define IDI_SHUTDOWN 22
 #define IDI_LOGOFF 21
@@ -28,8 +24,8 @@
 #define GINA_STR_LOGOFF 8010
 #define GINA_STR_LOGOFF_DESC 8011
 
-void ShowShutdownDialog();
-void ShowLogoffDialog();
+void ShowShutdownDialog(HWND parent = NULL);
+void ShowLogoffDialog(HWND parent = NULL);
 
 class ginaShutdownView
 {

@@ -144,8 +144,8 @@ int CALLBACK DlgProcUserSelect(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		bottomBtnYToMove += dialupRect.bottom - dialupRect.top;
 
 		// Move the OK, Cancel, Shutdown, Options, and language icon controls up
-		HWND hOK = GetDlgItem(hWnd, IDC_CREDVIEW_OK);
-		HWND hCancel = GetDlgItem(hWnd, IDC_CREDVIEW_CANCEL);
+		HWND hOK = GetDlgItem(hWnd, IDC_OK);
+		HWND hCancel = GetDlgItem(hWnd, IDC_CANCEL);
 		HWND hShutdown = GetDlgItem(hWnd, IDC_CREDVIEW_SHUTDOWN);
 		HWND hOptions = GetDlgItem(hWnd, IDC_CREDVIEW_OPTIONS);
 		HWND hLanguageIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LANGUAGE);

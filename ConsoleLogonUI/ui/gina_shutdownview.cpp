@@ -16,7 +16,7 @@ std::atomic<bool> isLogoffViewActive(false);
 std::mutex shutdownViewMutex;
 std::mutex logoffViewMutex;
 
-void ShowShutdownDialog()
+void ShowShutdownDialog(HWND parent)
 {
 	if (!ginaManager::Get()->hGinaDll) {
 		return;
@@ -27,14 +27,20 @@ void ShowShutdownDialog()
 		if (isShutdownViewActive.exchange(true)) {
 			return;
 		}
-		ginaShutdownView::Get()->Create();
+		if (parent) {
+			EnableWindow(parent, FALSE);
+		}
+		ginaShutdownView::Get()->Create(parent);
 		ginaShutdownView::Get()->Show();
 		ginaShutdownView::Get()->BeginMessageLoop();
 		isShutdownViewActive = false;
+		if (parent) {
+			EnableWindow(parent, TRUE);
+		}
 	}).detach();
 }
 
-void ShowLogoffDialog()
+void ShowLogoffDialog(HWND parent)
 {
 	if (!ginaManager::Get()->hGinaDll) {
 		return;
@@ -45,10 +51,16 @@ void ShowLogoffDialog()
 		if (isLogoffViewActive.exchange(true)) {
 			return;
 		}
-		ginaLogoffView::Get()->Create();
+		if (parent) {
+			EnableWindow(parent, FALSE);
+		}
+		ginaLogoffView::Get()->Create(parent);
 		ginaLogoffView::Get()->Show();
 		ginaLogoffView::Get()->BeginMessageLoop();
 		isLogoffViewActive = false;
+		if (parent) {
+			EnableWindow(parent, TRUE);
+		}
 	}).detach();
 }
 
@@ -63,6 +75,9 @@ void ginaShutdownView::Create(HWND parent)
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaShutdownView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_SHUTDOWN), parent, (DLGPROC)DlgProc, 0);
+#ifdef CLASSIC
+	MakeWindowClassic(ginaShutdownView::Get()->hDlg);
+#endif
 }
 
 void ginaShutdownView::Destroy()
@@ -92,6 +107,10 @@ void ginaShutdownView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
+		if (msg.message == WM_KEYDOWN)
+		{
+			DefWindowProcW(dlg->hDlg, msg.message, msg.wParam, msg.lParam);
+		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
@@ -136,8 +155,8 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		// Hide help button and move the OK and Cancel buttons
 		HWND hHelpBtn = GetDlgItem(hWnd, IDC_SHUTDOWN_HELP);
 		ShowWindow(hHelpBtn, SW_HIDE);
-		HWND hOkBtn = GetDlgItem(hWnd, IDC_SHUTDOWN_OK);
-		HWND hCancelBtn = GetDlgItem(hWnd, IDC_SHUTDOWN_CANCEL);
+		HWND hOkBtn = GetDlgItem(hWnd, IDC_OK);
+		HWND hCancelBtn = GetDlgItem(hWnd, IDC_CANCEL);
 		RECT helpRect, okRect, cancelRect;
 		GetWindowRect(hHelpBtn, &helpRect);
 		GetWindowRect(hOkBtn, &okRect);
@@ -148,12 +167,11 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		SetWindowPos(hOkBtn, NULL, okRect.left + helpRect.right - helpRect.left, okRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 		SetWindowPos(hCancelBtn, NULL, cancelRect.left + helpRect.right - helpRect.left, cancelRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 
-
 		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 	}
 	case WM_COMMAND:
 	{
-		if (LOWORD(lParam) == IDC_SHUTDOWN_COMBO)
+		if (HIWORD(wParam) == CBN_SELCHANGE)
 		{
 			HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
 			int index = SendMessageW(hShutdownCombo, CB_GETCURSEL, 0, 0);
@@ -184,7 +202,7 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 			LoadStringW(ginaManager::Get()->hGinaDll, descId, shutdownDesc, 256);
 			SetDlgItemTextW(hWnd, IDC_SHUTDOWN_DESC, shutdownDesc);
 		}
-		else if (LOWORD(wParam) == IDC_SHUTDOWN_OK)
+		else if (LOWORD(wParam) == IDC_OK)
 		{
 			HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
 			int index = SendMessageW(hShutdownCombo, CB_GETCURSEL, 0, 0);
@@ -193,19 +211,17 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 				index += 1;
 			}
 
-			KEY_EVENT_RECORD rec;
-			rec.wVirtualKeyCode = VK_ESCAPE; //forward it to consoleuiview
-			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
-
 			switch (index)
 			{
 			case 0:
 				ExitWindowsEx(EWX_LOGOFF, 0);
 				break;
 			case 1:
+				EnableShutdownPrivilege();
 				ExitWindowsEx(EWX_SHUTDOWN, 0);
 				break;
 			case 2:
+				EnableShutdownPrivilege();
 				ExitWindowsEx(EWX_REBOOT, 0);
 				break;
 			case 3:
@@ -215,8 +231,10 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 				SetSuspendState(TRUE, FALSE, FALSE);
 				break;
 			}
+
+			ginaShutdownView::Destroy();
 		}
-		else if (LOWORD(wParam) == IDC_SHUTDOWN_CANCEL)
+		else if (LOWORD(wParam) == IDC_CANCEL)
 		{
 			ginaShutdownView::Destroy();
 		}
@@ -271,6 +289,9 @@ void ginaLogoffView::Create(HWND parent)
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaLogoffView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_LOGOFF), parent, (DLGPROC)DlgProc, 0);
+#ifdef CLASSIC
+	MakeWindowClassic(ginaLogoffView::Get()->hDlg);
+#endif
 }
 
 void ginaLogoffView::Destroy()
@@ -317,14 +338,15 @@ int CALLBACK ginaLogoffView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	}
 	case WM_COMMAND:
 	{
-		if (LOWORD(wParam) == IDC_LOGOFF_OK)
+		if (LOWORD(wParam) == IDC_OK)
 		{
 			KEY_EVENT_RECORD rec;
 			rec.wVirtualKeyCode = VK_ESCAPE; //forward it to consoleuiview
 			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 			ExitWindowsEx(EWX_LOGOFF, 0);
+			ginaLogoffView::Destroy();
 		}
-		else if (LOWORD(wParam) == IDC_LOGOFF_CANCEL)
+		else if (LOWORD(wParam) == IDC_CANCEL)
 		{
 			ginaLogoffView::Destroy();
 		}

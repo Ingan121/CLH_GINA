@@ -2,6 +2,7 @@
 #include <wincodec.h>
 #include <wincodecsdk.h>
 #include <wtsapi32.h>
+#include <sddl.h>
 #include "winsta.h"
 
 #pragma comment(lib, "wtsapi32.lib")
@@ -150,4 +151,172 @@ bool IsFriendlyLogonUI(void)
 	);
 	RegCloseKey(hKey);
 	return dwResult == 0;
+}
+
+bool GetUserSid(LPCWSTR lpUsername, LPWSTR lpSid, DWORD dwSidSize)
+{
+	if (!lpUsername || !lpSid || !dwSidSize)
+		return false;
+
+	SID_NAME_USE SidType;
+	DWORD dwSidBufferSize = 0;
+	DWORD dwDomainBufferSize = 0;
+
+	// First call to LookupAccountName to get the buffer sizes.
+	LookupAccountNameW(NULL, lpUsername, NULL, &dwSidBufferSize, NULL, &dwDomainBufferSize, &SidType);
+
+	if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+		return false;
+
+	PSID pSid = (PSID)malloc(dwSidBufferSize);
+	LPWSTR lpDomain = (LPWSTR)malloc(dwDomainBufferSize * sizeof(WCHAR));
+
+	if (!pSid || !lpDomain)
+	{
+		free(pSid);
+		free(lpDomain);
+		return false;
+	}
+
+	// Second call to LookupAccountName to get the actual SID and domain name.
+	if (!LookupAccountNameW(NULL, lpUsername, pSid, &dwSidBufferSize, lpDomain, &dwDomainBufferSize, &SidType))
+	{
+		free(pSid);
+		free(lpDomain);
+		return false;
+	}
+
+	// Convert the SID to a string.
+	LPWSTR pszSid = NULL;
+	if (!ConvertSidToStringSidW(pSid, &pszSid))
+	{
+		free(pSid);
+		free(lpDomain);
+		return false;
+	}
+
+	// Copy the SID string to the output buffer.
+	wcsncpy_s(lpSid, dwSidSize, pszSid, _TRUNCATE);
+
+	free(pSid);
+	free(lpDomain);
+	return true;
+}
+
+bool GetUserHomeDir(LPWSTR lpUsername, LPWSTR lpHomeDir, DWORD dwHomeDirSize)
+{
+	if (!lpUsername || !lpHomeDir || !dwHomeDirSize)
+		return false;
+	WCHAR szSid[256], szKey[256];
+	if (!GetUserSid(lpUsername, szSid, 256))
+		return false;
+	wsprintfW(szKey, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\%s", szSid);
+	HKEY hKey;
+	if (ERROR_SUCCESS != RegOpenKeyExW(
+		HKEY_LOCAL_MACHINE,
+		szKey,
+		NULL,
+		KEY_READ,
+		&hKey
+	))
+	{
+		return false;
+	}
+	DWORD cbData = dwHomeDirSize;
+	if (ERROR_SUCCESS != RegQueryValueExW(
+		hKey,
+		L"ProfileImagePath",
+		NULL,
+		NULL,
+		(LPBYTE)lpHomeDir,
+		&cbData
+	))
+	{
+		RegCloseKey(hKey);
+		return false;
+	}
+	RegCloseKey(hKey);
+	return true;
+}
+
+LSTATUS GetUserRegHive(REGSAM samDesired, PHKEY phkResult)
+{
+	if (!phkResult)
+		return ERROR_INVALID_PARAMETER;
+	if (IsSystemUser())
+		return RegOpenKeyExW(HKEY_CURRENT_USER, NULL, 0, samDesired, phkResult);
+	WCHAR lpUsername[256], szSid[256];
+	if (!GetLoggedOnUserInfo(lpUsername, 256, NULL, 0))
+		return ERROR_INVALID_PARAMETER;
+	if (!GetUserSid(lpUsername, szSid, 256))
+		return ERROR_INVALID_PARAMETER;
+	return RegOpenKeyExW(HKEY_USERS, szSid, 0, samDesired, phkResult);
+}
+
+COLORREF GetBgColorFromRegistry()
+{
+	if (!IsSystemUser())
+	{
+		// GetSysColor works correctly in the secure desktop of a session with logged on user.
+		return GetSysColor(COLOR_BACKGROUND);
+	}
+	HKEY hKey;
+	if (ERROR_SUCCESS != RegOpenKeyExW(
+		HKEY_CURRENT_USER,
+		L"Control Panel\\Colors",
+		NULL,
+		KEY_READ,
+		&hKey
+	))
+		return GetSysColor(COLOR_BACKGROUND);
+	WCHAR szValue[256];
+	DWORD cbData = sizeof(szValue);
+	if (ERROR_SUCCESS != RegQueryValueExW(
+		hKey,
+		L"Background",
+		NULL,
+		NULL,
+		(LPBYTE)szValue,
+		&cbData
+	))
+	{
+		RegCloseKey(hKey);
+		return GetSysColor(COLOR_BACKGROUND);
+	}
+	RegCloseKey(hKey);
+	int r, g, b;
+	if (3 != swscanf_s(szValue, L"%d %d %d", &r, &g, &b))
+		return GetSysColor(COLOR_BACKGROUND);
+	return RGB(r, g, b);
+}
+
+void EmergencyRestart()
+{
+	typedef ULONG32(WINAPI* lpNtShutdownSystem)(int Action);
+	typedef ULONG32(WINAPI* lpNtSetSystemPowerState)(IN POWER_ACTION SystemAction, IN SYSTEM_POWER_STATE MinSystemState, IN ULONG32 Flags);
+
+	HMODULE hNtDll;
+	lpNtSetSystemPowerState NtSetSystemPowerState;
+	lpNtShutdownSystem NtShutdownSystem;
+
+	// Load ntdll.dll
+	if ((hNtDll = LoadLibrary(L"ntdll.dll")) == 0) {
+		return;
+	}
+
+	// Get functions
+	NtShutdownSystem = (lpNtShutdownSystem)GetProcAddress(hNtDll, "NtShutdownSystem");
+	if (NtShutdownSystem == NULL) {
+		return;
+	}
+	NtSetSystemPowerState = (lpNtSetSystemPowerState)GetProcAddress(hNtDll, "NtSetSystemPowerState");
+	if (NtSetSystemPowerState == NULL) {
+		return;
+	}
+
+	if (!EnableShutdownPrivilege())
+		return;
+
+	NtShutdownSystem(1); // 1 = ShutdownReboot
+	NtSetSystemPowerState((POWER_ACTION)PowerSystemShutdown, (SYSTEM_POWER_STATE)PowerActionShutdownReset, 0);
 }

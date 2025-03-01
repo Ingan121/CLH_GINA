@@ -6,6 +6,16 @@
 #include "gina_statusview.h"
 #include "gina_securitycontrol.h"
 
+//#define SHOWCONSOLE
+
+#ifdef _DEBUG
+#define SHOWCONSOLE
+#endif
+
+#ifndef XP
+#define CLASSIC
+#endif
+
 // Win2K KR msgina.dll resources
 #define GINA_DLL_NAME L"msgina.dll"
 #define GINA_BMP_BRD 107
@@ -25,6 +35,9 @@
 #define GINA_LARGE_BRD_HEIGHT 88
 #define GINA_SMALL_BRD_HEIGHT 72
 #define GINA_BAR_HEIGHT 5
+
+#define IDC_OK 1
+#define IDC_CANCEL 2
 
 class ginaManager
 {

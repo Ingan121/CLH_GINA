@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <string>
 #include "gina_manager.h"
+#include <atomic>
 
 #define IDC_CREDVIEW_USERNAME 1502
 #define IDC_CREDVIEW_USERNAME_LABEL 1506
@@ -10,8 +11,6 @@
 #define IDC_CREDVIEW_DOMAIN 1504
 #define IDC_CREDVIEW_DOMAIN_LABEL 1508
 #define IDC_CREDVIEW_DIALUP 1505
-#define IDC_CREDVIEW_OK 1
-#define IDC_CREDVIEW_CANCEL 2
 #define IDC_CREDVIEW_SHUTDOWN 1501
 #define IDC_CREDVIEW_OPTIONS 1514
 #define IDC_CREDVIEW_LEGAL 2400
@@ -23,8 +22,6 @@
 #define IDC_CREDVIEW_LOCKED_PASSWORD 1954
 #define IDC_CREDVIEW_LOCKED_DOMAIN 1956
 #define IDC_CREDVIEW_LOCKED_DOMAIN_LABEL 1957
-#define IDC_CREDVIEW_LOCKED_OK 1
-#define IDC_CREDVIEW_LOCKED_CANCEL 2
 #define IDC_CREDVIEW_LOCKED_OPTIONS 2401
 #define IDC_CREDVIEW_LOCKED_LANGUAGE 2406
 
@@ -40,8 +37,6 @@
 #define IDC_CHPW_NEW_PASSWORD_LABEL 1707
 #define IDC_CHPW_CONFIRM_PASSWORD 1710
 #define IDC_CHPW_CONFIRM_PASSWORD_LABEL 1709
-#define IDC_CHPW_OK 1
-#define IDC_CHPW_CANCEL 2
 #define IDC_CHPW_LANGUAGE 2406
 
 #define GINA_STR_OPTBTN_EXPAND 1800
@@ -64,6 +59,7 @@ class ginaSelectedCredentialView
 {
 public:
 	HWND hDlg;
+	std::atomic <bool> isActive;
 	static ginaSelectedCredentialView* Get();
 	static void Create();
 	static void Destroy();
@@ -77,6 +73,7 @@ class ginaSelectedCredentialViewLocked
 {
 public:
 	HWND hDlg;
+	std::atomic <bool> isActive;
 	static ginaSelectedCredentialViewLocked* Get();
 	static void Create();
 	static void Destroy();
@@ -90,6 +87,7 @@ class ginaChangePwdView
 {
 public:
 	HWND hDlg;
+	std::atomic <bool> isActive;
 	static ginaChangePwdView* Get();
 	static void Create();
 	static void Destroy();

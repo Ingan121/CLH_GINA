@@ -21,7 +21,9 @@ HWND g_hUsernameCombo = NULL;
 void external::UserSelect_SetActive()
 {
 #ifndef SHOWCONSOLE
-	HideConsoleUI();
+	if (ginaManager::Get()->hGinaDll) {
+		HideConsoleUI();
+	}
 #endif
 }
 
@@ -97,9 +99,18 @@ ginaUserSelect* ginaUserSelect::Get()
 
 void ginaUserSelect::Create()
 {
+	if (!IsSystemUser())
+	{
+		// Somehow canceling the change password dialog causes this to open
+		// Since this dialog is only for pre-logon sessions, just ignore it on post-logon sessions (where the Ctrl+Alt+Del dialog and the change password dialog are used)
+		return;
+	}
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaUserSelect::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT), 0, (DLGPROC)DlgProc, 0);
+#ifdef CLASSIC
+	MakeWindowClassic(ginaUserSelect::Get()->hDlg);
+#endif
 }
 
 void ginaUserSelect::Destroy()
@@ -129,6 +140,22 @@ void ginaUserSelect::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
+		if (msg.message == WM_KEYDOWN)
+		{
+			if (msg.wParam == VK_RETURN || msg.wParam == VK_ESCAPE)
+			{
+				if (msg.wParam == VK_RETURN)
+				{
+					// Handle Enter key
+					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
+				}
+				else if (msg.wParam == VK_ESCAPE)
+				{
+					// Handle Esc key
+					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
+				}
+			}
+		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
@@ -218,8 +245,8 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		bottomBtnYToMove += dialupRect.bottom - dialupRect.top;
 
 		// Move the OK, Cancel, Shutdown, Options, and language icon controls up
-		HWND hOK = GetDlgItem(hWnd, IDC_CREDVIEW_OK);
-		HWND hCancel = GetDlgItem(hWnd, IDC_CREDVIEW_CANCEL);
+		HWND hOK = GetDlgItem(hWnd, IDC_OK);
+		HWND hCancel = GetDlgItem(hWnd, IDC_CANCEL);
 		HWND hShutdown = GetDlgItem(hWnd, IDC_CREDVIEW_SHUTDOWN);
 		HWND hOptions = GetDlgItem(hWnd, IDC_CREDVIEW_OPTIONS);
 		HWND hLanguageIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LANGUAGE);
@@ -249,23 +276,21 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	}
 	case WM_COMMAND:
 	{
-		if (LOWORD(wParam) == IDC_CREDVIEW_OK)
+		if (LOWORD(wParam) == IDC_OK)
 		{
 			// OK button
 			int total = buttons.size();
 			int index = SendMessageW(g_hUsernameCombo, CB_GETCURSEL, 0, 0);
 			buttons[total - index - 1].Press();
 		}
-		else if (LOWORD(wParam) == IDC_CREDVIEW_CANCEL)
+		else if (LOWORD(wParam) == IDC_CANCEL)
 		{
 			// Cancel button, disabled
 		}
 		else if (LOWORD(wParam) == IDC_CREDVIEW_SHUTDOWN)
 		{
 			// Shutdown button
-			ginaShutdownView::Get()->Create(hWnd);
-			ginaShutdownView::Get()->Show();
-			ginaShutdownView::Get()->BeginMessageLoop();
+			ShowShutdownDialog(hWnd);
 		}
 		else if (LOWORD(wParam) == IDC_CREDVIEW_OPTIONS)
 		{
@@ -292,20 +317,6 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 			wchar_t optBtnStr[256];
 			LoadStringW(hGinaDll, isShutdownVisible ? GINA_STR_OPTBTN_EXPAND : GINA_STR_OPTBTN_COLLAPSE, optBtnStr, 256);
 			SetDlgItemTextW(hWnd, 1514, optBtnStr);
-		}
-		break;
-	}
-	case WM_KEYDOWN:
-	{
-		if (wParam == VK_RETURN)
-		{
-			// Handle Enter key
-			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_OK, BN_CLICKED), 0);
-		}
-		else if (wParam == VK_ESCAPE)
-		{
-			// Handle Esc key
-			SendMessage(hWnd, WM_COMMAND, MAKEWPARAM(IDC_CREDVIEW_CANCEL, BN_CLICKED), 0);
 		}
 		break;
 	}
@@ -346,57 +357,3 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	}
 	return 0;
 }
-
-//LRESULT CALLBACK ginaUserSelect::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-//{
-//	HINSTANCE hInstance = ginaManager::Get()->hInstance;
-//	switch (message)
-//	{
-//	case WM_CREATE:
-//	{
-//		wchar_t msg[256];
-//		//wsprintf(msg, L"Button size: %d", buttons.size());
-//		//MessageBoxW(NULL, msg, L"Info", MB_OK | MB_ICONINFORMATION);
-//		for (int i = 0; i < buttons.size(); ++i)
-//		{
-//			auto& button = buttons[i];
-//			CreateWindowW(L"BUTTON", button.GetText().c_str(), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 0, 0, 100 + i * 100, 25, hWnd, (HMENU)i, hInstance, 0);
-//		}
-//		break;
-//	}
-//	case WM_COMMAND:
-//	{
-//		//MessageBoxW(NULL, L"1", L"Info", MB_OK | MB_ICONINFORMATION);
-//		int id = LOWORD(wParam);
-//		auto& button = buttons[id];
-//		button.Press();
-//		break;
-//	}
-//	case WM_PAINT:
-//	{
-//		PAINTSTRUCT ps;
-//		HDC hdc = BeginPaint(hWnd, &ps);
-//		HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
-//		FillRect(hdc, &ps.rcPaint, hBrush);
-//		DeleteObject(hBrush);
-//		EndPaint(hWnd, &ps);
-//		break;
-//	}
-//	case WM_SETCURSOR:
-//	{
-//		SetCursor(LoadCursor(NULL, IDC_ARROW));
-//		return TRUE;
-//	}
-//	case WM_CLOSE:
-//	{
-//		DestroyWindow(hWnd);
-//		break;
-//	}
-//	case WM_DESTROY:
-//	{
-//		PostQuitMessage(0); // Trigger exit thread
-//		break;
-//	}
-//	}
-//	return DefWindowProc(hWnd, message, wParam, lParam);
-//}

@@ -9,7 +9,6 @@
 
 std::wstring g_statusText;
 
-std::atomic<bool> isStatusViewActive(false);
 std::mutex statusViewMutex;
 
 void external::StatusView_SetActive(const wchar_t* text)
@@ -23,20 +22,21 @@ void external::StatusView_SetActive(const wchar_t* text)
 	HideConsoleUI();
 #endif
 
-	ginaManager::Get()->CloseAllDialogs();
-
 	g_statusText = text;
 
 	std::thread([=] {
-		if (isStatusViewActive.exchange(true)) {
+		if (ginaStatusView::Get()->isActive.exchange(true)) {
+			ginaSelectedCredentialView::Get()->Destroy();
 			ginaStatusView::Get()->UpdateText();
 			return;
 		}
+
+		ginaManager::Get()->CloseAllDialogs();
 		
 		ginaStatusView::Get()->Create();
 		ginaStatusView::Get()->Show();
 		ginaStatusView::Get()->BeginMessageLoop();
-		isStatusViewActive = false;
+		ginaStatusView::Get()->isActive = false;
 	}).detach();
 }
 
@@ -51,6 +51,9 @@ void ginaStatusView::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaStatusView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_STATUS_VIEW), 0, (DLGPROC)DlgProc, 0);
+#ifdef CLASSIC
+	MakeWindowClassic(ginaStatusView::Get()->hDlg);
+#endif
 	if (ginaStatusView::Get()->hDlg != NULL) {
 		SetDlgItemTextW(ginaStatusView::Get()->hDlg, IDC_STATUS_TEXT, g_statusText.c_str());
 	}
