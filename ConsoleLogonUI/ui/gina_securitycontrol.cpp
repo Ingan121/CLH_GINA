@@ -19,11 +19,9 @@ void external::SecurityControlButtonsList_Clear()
 
 void external::SecurityControl_SetActive()
 {
-#ifndef SHOWCONSOLE
-	if (ginaManager::Get()->hGinaDll) {
+	if (ginaManager::Get()->hGinaDll && !ginaManager::Get()->config.showConsole) {
 		HideConsoleUI();
 	}
-#endif
     buttonsList.clear();
 }
 
@@ -61,9 +59,16 @@ void ginaSecurityControl::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaSecurityControl::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_SECURITY_CONTROL), 0, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaSecurityControl::Get()->hDlg);
-#endif
+	if (!ginaSecurityControl::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create security control dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		external::ShowConsoleUI();
+		return;
+	}
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaSecurityControl::Get()->hDlg);
+	}
 }
 
 void ginaSecurityControl::Destroy()
@@ -93,6 +98,37 @@ void ginaSecurityControl::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
+		if (msg.message == WM_KEYDOWN)
+		{
+			switch (msg.wParam)
+			{
+			case VK_RETURN:
+			case VK_SPACE:
+			{
+				TabSpace(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]));
+				break;
+			}
+			case VK_ESCAPE:
+			{
+				KEY_EVENT_RECORD rec;
+				rec.wVirtualKeyCode = VK_ESCAPE;
+				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+				break;
+			}
+			case VK_TAB:
+			{
+				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+				{
+					TabPrev(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0]);
+				}
+				else
+				{
+					TabNext(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0]);
+				}
+				break;
+			}
+			}
+		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
@@ -189,11 +225,12 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_SMALL_BRD_HEIGHT;
-#ifdef XP
-		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
-#else
-		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
-#endif
+		COLORREF brdColor = RGB(255, 255, 255);
+		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+		{
+			brdColor = RGB(90, 124, 223);
+		}
+		HBRUSH hBrush = CreateSolidBrush(brdColor);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;

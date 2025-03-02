@@ -1,6 +1,10 @@
 #include <Windows.h>
 #include "gina_manager.h"
 #include <thread>
+#include "util/util.h"
+#include "util/interop.h"
+
+#pragma comment(lib, "Version.lib")
 
 ginaManager* ginaManager::Get()
 {
@@ -10,7 +14,15 @@ ginaManager* ginaManager::Get()
 
 ginaManager::ginaManager()
 {
+	hInstance = NULL;
 	hGinaDll = NULL;
+	hBar = NULL;
+	ginaVersion = 0;
+	initedPreLogon = FALSE;
+	config = {
+		FALSE,
+		FALSE
+	};
 }
 
 void ginaManager::LoadGina()
@@ -19,11 +31,103 @@ void ginaManager::LoadGina()
 	if (!hGinaDll)
 	{
 		std::thread([] {
-			MessageBoxW(0, L"Failed to load msgina.dll! Please put a copy of msgina.dll from a Windows 2000 installation in system32.", L"CLH_GINA", MB_OK | MB_ICONERROR);
+			MessageBoxW(0, L"Failed to load msgina.dll! Please put a copy of msgina.dll from a Windows 2000/XP installation in system32.", L"CLH_GINA", MB_OK | MB_ICONERROR);
 		}).detach();
 		return;
 	}
+	else
+	{
+		DWORD dwHandle;
+		HRSRC hRes = FindResourceW(hGinaDll, MAKEINTRESOURCEW(1), RT_VERSION);
+		if (hRes)
+		{
+			HGLOBAL hGlobal = LoadResource(hGinaDll, hRes);
+			if (hGlobal)
+			{
+				LPVOID lpData = LockResource(hGlobal);
+				if (lpData)
+				{
+					UINT uLen = SizeofResource(hGinaDll, hRes);
+					if (uLen)
+					{
+						VS_FIXEDFILEINFO* pFileInfo;
+						UINT uFileInfoLen;
+						if (VerQueryValueW(lpData, L"\\", (LPVOID*)&pFileInfo, &uFileInfoLen))
+						{
+							int major = HIWORD(pFileInfo->dwFileVersionMS);
+							int minor = LOWORD(pFileInfo->dwFileVersionMS);
+							if (major == 5 && minor == 0)
+							{
+								ginaVersion = GINA_VER_2K;
+							}
+							else if (major == 5 && minor == 1)
+							{
+								ginaVersion = GINA_VER_XP;
+							}
+							else if (major == 4)
+							{
+								ginaVersion = GINA_VER_NT4;
+							}
+							else
+							{
+								ginaVersion = GINA_VER_NT3;
+							}
+						}
+					}
+				}
+			}
+		}
+		if (!ginaVersion || ginaVersion < GINA_VER_2K)
+		{
+			std::thread([] {
+				MessageBoxW(0, L"This version of msgina.dll is not supported yet! Please use a msgina.dll from Windows 2000 or XP.", L"CLH_GINA", MB_OK | MB_ICONERROR);
+			}).detach();
+			FreeLibrary(hGinaDll);
+			hGinaDll = NULL;
+			return;
+		}
+	}
 	hBar = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BAR));
+	initedPreLogon = IsSystemUser();
+
+#ifdef SHOWCONSOLE
+	config.showConsole = TRUE;
+#else
+	config.showConsole = GetConfigInt(L"ShowConsole", 0);
+#endif
+
+	int classicTheme = GetConfigInt(L"ClassicTheme", -1);
+	if (classicTheme == -1)
+	{
+		config.classicTheme = ginaVersion != GINA_VER_XP;
+	}
+	else
+	{
+		config.classicTheme = classicTheme;
+	}
+
+	// Last resort to show console if something goes wrong
+	std::thread([] {
+		int cnt = 0;
+		while (true)
+		{
+			HWND hDlg = FindWindow(L"#32770", NULL);
+			if (hDlg && IsWindowVisible(hDlg))
+			{
+				cnt = 0;
+			}
+			else
+			{
+				cnt++;
+			}
+			if (cnt > 3)
+			{
+				external::ShowConsoleUI();
+				ginaManager::Get()->config.showConsole = TRUE;
+			}
+			Sleep(2000);
+		}
+	}).detach();
 }
 
 void ginaManager::UnloadGina()
@@ -36,20 +140,26 @@ void ginaManager::UnloadGina()
 
 void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
 {
-    RECT rect;
+    RECT rect, clientRect;
     GetWindowRect(hDlg, &rect);
+	GetClientRect(hDlg, &clientRect);
     int dlgWidth = rect.right - rect.left;
     int dlgHeight = rect.bottom - rect.top;
+	int dlgClientWidth = clientRect.right - clientRect.left;
     HBITMAP hBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(isLarge ? GINA_BMP_BRD : GINA_BMP_BRD_SMALL));
     BITMAP bmp;
     GetObjectW(hBranding, sizeof(BITMAP), &bmp);
     int brdWidth = bmp.bmWidth;
 	int brdHeight = bmp.bmHeight;
-#ifdef XP
-    int brdX = (dlgWidth - brdWidth) / 2;
-#else
-    int brdX = 0;
-#endif
+	int brdX = 0;
+	if (dlgClientWidth < brdWidth)
+	{
+		dlgWidth = dlgWidth - dlgClientWidth + brdWidth;
+	}
+	else if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+	{
+		brdX = (dlgWidth - brdWidth) / 2;
+	}
     int topAreaHeight = brdHeight + GINA_BAR_HEIGHT;
 
     // Move all existing controls down

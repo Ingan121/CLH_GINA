@@ -19,6 +19,15 @@
 #define GINA_STR_EMERGENCY_RESTART_TITLE 1540
 #define GINA_STR_EMERGENCY_RESTART_DESC 1541
 
+static int securityTabIndex[] = {
+	IDC_SECURITY_LOCK,
+	IDC_SECURITY_LOGOFF,
+	IDC_SECURITY_SHUTDOWN,
+	IDC_SECURITY_CHANGEPWD,
+	IDC_SECURITY_TASKMGR,
+	IDC_CANCEL
+};
+
 struct SecurityOptionControlWrapper
 {
     void* actualInstance;

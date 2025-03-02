@@ -1,10 +1,5 @@
 #pragma once
 #include <windows.h>
-#include "gina_messageview.h"
-#include "gina_userselect.h"
-#include "gina_selectedcredentialview.h"
-#include "gina_statusview.h"
-#include "gina_securitycontrol.h"
 
 //#define SHOWCONSOLE
 
@@ -12,11 +7,7 @@
 #define SHOWCONSOLE
 #endif
 
-#ifndef XP
-#define CLASSIC
-#endif
-
-// Win2K KR msgina.dll resources
+// msgina.dll resources
 #define GINA_DLL_NAME L"msgina.dll"
 #define GINA_BMP_BRD 107
 #define GINA_BMP_BRD_SMALL 101
@@ -39,6 +30,22 @@
 #define IDC_OK 1
 #define IDC_CANCEL 2
 
+#define GINA_VER_NT3 0
+#define GINA_VER_NT4 1
+#define GINA_VER_2K 2
+#define GINA_VER_XP 3
+
+#include "gina_messageview.h"
+#include "gina_userselect.h"
+#include "gina_selectedcredentialview.h"
+#include "gina_statusview.h"
+#include "gina_securitycontrol.h"
+
+struct ginaConfig {
+	BOOL showConsole;
+	BOOL classicTheme;
+};
+
 class ginaManager
 {
 public:
@@ -46,6 +53,12 @@ public:
 	HMODULE hGinaDll;
 
 	HBITMAP hBar;
+
+	int ginaVersion;
+
+	BOOL initedPreLogon;
+
+	ginaConfig config;
 
 	ginaManager();
 

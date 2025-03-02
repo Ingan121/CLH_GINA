@@ -1,9 +1,10 @@
 #pragma once
 #include "gina_selectedcredentialview.h"
 #include "gina_shutdownview.h"
-#include <vector>
+#include "wallhost.h"
 #include "../util/util.h"
 #include "../util/interop.h"
+#include <vector>
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -25,9 +26,9 @@ void external::SelectedCredentialView_SetActive(const wchar_t* accountNameToDisp
 	}
 
 	std::lock_guard<std::mutex> lock(credentialViewMutex);
-#ifndef SHOWCONSOLE
+	if (!ginaManager::Get()->config.showConsole) {
 		HideConsoleUI();
-#endif
+	}
 
 	g_accountName = accountNameToDisplay;
 
@@ -129,20 +130,25 @@ void ginaSelectedCredentialView::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaSelectedCredentialView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT), 0, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaSelectedCredentialView::Get()->hDlg);
-#endif
-	if (ginaSelectedCredentialView::Get()->hDlg != NULL) {
-		if (IsFriendlyLogonUI())
-		{
-			SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, IDC_CREDVIEW_USERNAME, g_accountName.c_str());
-		}
-		else
-		{
-			wchar_t username[256];
-			GetLastLogonUser(username, 256);
-			SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, IDC_CREDVIEW_USERNAME, username);
-		}
+	if (!ginaSelectedCredentialView::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create selected credential view dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		external::ShowConsoleUI();
+		return;
+	}
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaSelectedCredentialView::Get()->hDlg);
+	}
+	if (IsFriendlyLogonUI())
+	{
+		SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, IDC_CREDVIEW_USERNAME, g_accountName.c_str());
+	}
+	else
+	{
+		wchar_t username[256];
+		GetLastLogonUser(username, 256);
+		SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, IDC_CREDVIEW_USERNAME, username);
 	}
 }
 
@@ -173,6 +179,45 @@ void ginaSelectedCredentialView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
+
+		if (msg.message == WM_KEYDOWN)
+		{
+			switch (msg.wParam)
+			{
+			case VK_RETURN:
+			{
+				if (!TabSpace(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0])))
+				{
+					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
+				}
+				break;
+			}
+			case VK_SPACE:
+			{
+				TabSpace(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]));
+				break;
+			}
+			case VK_ESCAPE:
+			{
+				KEY_EVENT_RECORD rec;
+				rec.wVirtualKeyCode = VK_ESCAPE;
+				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+				break;
+			}
+			case VK_TAB:
+			{
+				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+				{
+					TabPrev(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK);
+				}
+				else
+				{
+					TabNext(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK);
+				}
+				break;
+			}
+			}
+		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
@@ -197,6 +242,24 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&legalRect, 2);
 		dlgHeightToReduce = legalRect.bottom - legalRect.top;
 		ShowWindow(hLegalAnnouncement, SW_HIDE);
+
+		// Hide the XP-specific locked message for the pre-logon dialog
+		// (Used in XP when the Welcome screen is disabled and tsdiscon.exe is used)
+		HWND hLockedGroupBox = GetDlgItem(hWnd, IDC_CREDVIEW_XP_LOCKED_GROUP);
+		if (hLockedGroupBox)
+		{
+			ShowWindow(hLockedGroupBox, SW_HIDE);
+			RECT lockedRect;
+			GetWindowRect(hLockedGroupBox, &lockedRect);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&lockedRect, 2);
+			HWND hLockedInfo = GetDlgItem(hWnd, IDC_CREDVIEW_XP_LOCKED_INFO);
+			HWND hLockedUsernameInfo = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_USERNAME_INFO);
+			HWND hLockedIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_ICON);
+			ShowWindow(hLockedInfo, SW_HIDE);
+			ShowWindow(hLockedUsernameInfo, SW_HIDE);
+			ShowWindow(hLockedIcon, SW_HIDE);
+			dlgHeightToReduce += lockedRect.bottom - lockedRect.top;
+		}
 
 		HWND hChild = GetWindow(hWnd, GW_CHILD);
 		while (hChild != NULL)
@@ -265,6 +328,9 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 
 		// Load branding and bar images
 		manager->LoadBranding(hWnd, TRUE);
+
+		SetFocus(GetDlgItem(hWnd, IDC_CREDVIEW_PASSWORD));
+		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
 		break;
 	}
 	case WM_COMMAND:
@@ -340,11 +406,12 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_LARGE_BRD_HEIGHT;
-#ifdef XP
-		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
-#else
-		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
-#endif
+		COLORREF brdColor = RGB(255, 255, 255);
+		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+		{
+			brdColor = RGB(90, 124, 223);
+		}
+		HBRUSH hBrush = CreateSolidBrush(brdColor);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
@@ -382,18 +449,31 @@ void ginaSelectedCredentialViewLocked::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaSelectedCredentialViewLocked::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT_LOCKED), 0, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaSelectedCredentialViewLocked::Get()->hDlg);
-#endif
-	if (ginaSelectedCredentialViewLocked::Get()->hDlg != NULL) {
-		WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
-		WCHAR szFormat[256], szText[1024];
-		GetLoggedOnUserInfo(_wszUserName, MAX_PATH, _wszDomainName, MAX_PATH);
-		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_CREDVIEW_LOCKED_USERNAME_INFO, szFormat, 256);
-		swprintf_s(szText, szFormat, _wszDomainName, _wszUserName, _wszUserName);
-		SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME_INFO, szText);
-		SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME, _wszUserName);
+	if (!ginaSelectedCredentialViewLocked::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create selected credential view dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		external::ShowConsoleUI();
+		return;
 	}
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaSelectedCredentialViewLocked::Get()->hDlg);
+	}
+	if (ginaManager::Get()->initedPreLogon)
+	{
+		// "Use sign-in info to automatically finish setting up my device" is enabled
+		// So the locked window opens right after boot
+		// But this somehow doesn't fire the WM_THEMECHANGED message to the wallhost
+		// So we need to manually send it
+		PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
+	}
+	WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
+	WCHAR szFormat[256], szText[1024];
+	GetLoggedOnUserInfo(_wszUserName, MAX_PATH, _wszDomainName, MAX_PATH);
+	LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_CREDVIEW_LOCKED_USERNAME_INFO, szFormat, 256);
+	swprintf_s(szText, szFormat, _wszDomainName, _wszUserName, _wszUserName);
+	SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME_INFO, szText);
+	SetDlgItemTextW(ginaSelectedCredentialViewLocked::Get()->hDlg, IDC_CREDVIEW_LOCKED_USERNAME, _wszUserName);
 }
 
 void ginaSelectedCredentialViewLocked::Destroy()
@@ -423,6 +503,45 @@ void ginaSelectedCredentialViewLocked::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
+
+		if (msg.message == WM_KEYDOWN)
+		{
+			switch (msg.wParam)
+			{
+			case VK_RETURN:
+			{
+				if (!TabSpace(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0])))
+				{
+					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
+				}
+				break;
+			}
+			case VK_SPACE:
+			{
+				TabSpace(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]));
+				break;
+			}
+			case VK_ESCAPE:
+			{
+				KEY_EVENT_RECORD rec;
+				rec.wVirtualKeyCode = VK_ESCAPE;
+				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+				break;
+			}
+			case VK_TAB:
+			{
+				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+				{
+					TabPrev(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK);
+				}
+				else
+				{
+					TabNext(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK);
+				}
+				break;
+			}
+			}
+		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
@@ -476,6 +595,9 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 
 		// Load branding and bar images
 		ginaManager::Get()->LoadBranding(hWnd, FALSE);
+
+		SetFocus(GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_PASSWORD));
+		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
 		break;
 	}
 	case WM_COMMAND:
@@ -520,11 +642,12 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_SMALL_BRD_HEIGHT;
-#ifdef XP
-		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
-#else
-		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
-#endif
+		COLORREF brdColor = RGB(255, 255, 255);
+		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+		{
+			brdColor = RGB(90, 124, 223);
+		}
+		HBRUSH hBrush = CreateSolidBrush(brdColor);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
@@ -557,9 +680,16 @@ void ginaChangePwdView::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaChangePwdView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_CHANGE_PWD), 0, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaChangePwdView::Get()->hDlg);
-#endif
+	if (!ginaChangePwdView::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create change password dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		external::ShowConsoleUI();
+		return;
+	}
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaChangePwdView::Get()->hDlg);
+	}
 }
 
 void ginaChangePwdView::Destroy()
@@ -588,6 +718,44 @@ void ginaChangePwdView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
+		if (msg.message == WM_KEYDOWN)
+		{
+			switch (msg.wParam)
+			{
+			case VK_RETURN:
+			{
+				if (!TabSpace(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0])))
+				{
+					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
+				}
+				break;
+			}
+			case VK_SPACE:
+			{
+				TabSpace(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]));
+				break;
+			}
+			case VK_ESCAPE:
+			{
+				KEY_EVENT_RECORD rec;
+				rec.wVirtualKeyCode = VK_ESCAPE;
+				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+				break;
+			}
+			case VK_TAB:
+			{
+				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+				{
+					TabPrev(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK);
+				}
+				else
+				{
+					TabNext(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK);
+				}
+				break;
+			}
+			}
+		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
@@ -604,6 +772,15 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		SetDlgItemTextW(hWnd, IDC_CHPW_USERNAME, lpUsername);
 		EnableWindow(GetDlgItem(hWnd, IDC_CHPW_DOMAIN), FALSE);
 		SetDlgItemTextW(hWnd, IDC_CHPW_DOMAIN, lpDomain);
+
+		HWND hBackup = GetDlgItem(hWnd, IDC_CHPW_BACKUP);
+		if (hBackup)
+		{
+			ShowWindow(hBackup, SW_HIDE);
+		}
+
+		SetFocus(GetDlgItem(hWnd, IDC_CHPW_OLD_PASSWORD));
+		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
 		break;
 	}
 	case WM_COMMAND:

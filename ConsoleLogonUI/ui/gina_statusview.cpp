@@ -1,6 +1,7 @@
 #pragma once
 #include <windows.h>
 #include "gina_statusview.h"
+#include "wallhost.h"
 #include "util/util.h"
 #include "util/interop.h"
 #include <thread>
@@ -18,9 +19,9 @@ void external::StatusView_SetActive(const wchar_t* text)
 	}
 
 	std::lock_guard<std::mutex> lock(statusViewMutex);
-#ifndef SHOWCONSOLE
-	HideConsoleUI();
-#endif
+	if (!ginaManager::Get()->config.showConsole) {
+		HideConsoleUI();
+	}
 
 	g_statusText = text;
 
@@ -51,9 +52,17 @@ void ginaStatusView::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaStatusView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_STATUS_VIEW), 0, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaStatusView::Get()->hDlg);
-#endif
+	if (!ginaStatusView::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create status view dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		external::ShowConsoleUI();
+		return;
+	}
+	PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaStatusView::Get()->hDlg);
+	}
 	if (ginaStatusView::Get()->hDlg != NULL) {
 		SetDlgItemTextW(ginaStatusView::Get()->hDlg, IDC_STATUS_TEXT, g_statusText.c_str());
 	}
@@ -131,11 +140,12 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_SMALL_BRD_HEIGHT;
-#ifdef XP
-		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
-#else
-		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
-#endif
+		COLORREF brdColor = RGB(255, 255, 255);
+		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+		{
+			brdColor = RGB(90, 124, 223);
+		}
+		HBRUSH hBrush = CreateSolidBrush(brdColor);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;

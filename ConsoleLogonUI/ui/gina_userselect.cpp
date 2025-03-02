@@ -20,11 +20,9 @@ HWND g_hUsernameCombo = NULL;
 
 void external::UserSelect_SetActive()
 {
-#ifndef SHOWCONSOLE
-	if (ginaManager::Get()->hGinaDll) {
+	if (ginaManager::Get()->hGinaDll && !ginaManager::Get()->config.showConsole) {
 		HideConsoleUI();
 	}
-#endif
 }
 
 void external::SelectableUserOrCredentialControl_Sort()
@@ -108,9 +106,16 @@ void ginaUserSelect::Create()
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaUserSelect::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT), 0, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaUserSelect::Get()->hDlg);
-#endif
+	if (!ginaUserSelect::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create user select dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		external::ShowConsoleUI();
+		return;
+	}
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaUserSelect::Get()->hDlg);
+	}
 }
 
 void ginaUserSelect::Destroy()
@@ -180,6 +185,24 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&legalRect, 2);
 		dlgHeightToReduce = legalRect.bottom - legalRect.top;
 		ShowWindow(hLegalAnnouncement, SW_HIDE);
+
+		// Hide the XP-specific locked message for the pre-logon dialog
+		// (Used in XP when the Welcome screen is disabled and tsdiscon.exe is used)
+		HWND hLockedGroupBox = GetDlgItem(hWnd, IDC_CREDVIEW_XP_LOCKED_GROUP);
+		if (hLockedGroupBox)
+		{
+			ShowWindow(hLockedGroupBox, SW_HIDE);
+			RECT lockedRect;
+			GetWindowRect(hLockedGroupBox, &lockedRect);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&lockedRect, 2);
+			HWND hLockedInfo = GetDlgItem(hWnd, IDC_CREDVIEW_XP_LOCKED_INFO);
+			HWND hLockedUsernameInfo = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_USERNAME_INFO);
+			HWND hLockedIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_ICON);
+			ShowWindow(hLockedInfo, SW_HIDE);
+			ShowWindow(hLockedUsernameInfo, SW_HIDE);
+			ShowWindow(hLockedIcon, SW_HIDE);
+			dlgHeightToReduce += lockedRect.bottom - lockedRect.top;
+		}
 
 		HWND hChild = GetWindow(hWnd, GW_CHILD);
 		while (hChild != NULL)
@@ -272,6 +295,8 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 
 		// Load branding and bar images
 		manager->LoadBranding(hWnd, TRUE);
+		SetFocus(GetDlgItem(hWnd, IDC_CREDVIEW_PASSWORD));
+		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
 		break;
 	}
 	case WM_COMMAND:
@@ -327,11 +352,12 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_LARGE_BRD_HEIGHT;
-#ifdef XP
-		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
-#else
-		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
-#endif
+		COLORREF brdColor = RGB(255, 255, 255);
+		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+		{
+			brdColor = RGB(90, 124, 223);
+		}
+		HBRUSH hBrush = CreateSolidBrush(brdColor);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;

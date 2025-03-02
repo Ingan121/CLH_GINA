@@ -7,7 +7,7 @@
 
 #pragma comment(lib, "wtsapi32.lib")
 
-// https://github.com/aubymori/XPLogonUI/blob/f75e9e06f8266ddb92218fabf3cdd7b386233b30/XPLogonUI/util.cpp#L96
+// Some functions are from https://github.com/aubymori/XPLogonUI/blob/f75e9e06f8266ddb92218fabf3cdd7b386233b30/XPLogonUI/util.cpp#L96
 
 DWORD GetLoggedOnUserInfo(LPWSTR lpUsername, UINT cchUsernameMax, LPWSTR lpDomain, UINT cchDomainMax)
 {
@@ -85,6 +85,46 @@ int GetLastLogonUser(LPWSTR lpUsername, UINT cchUsernameMax)
 	wcscpy_s(lpUsername, cchUsernameMax, pszDomain + 1);
 
     return 0;
+}
+
+int GetConfigInt(LPCWSTR lpValueName, int defaultValue)
+{
+	HKEY hKey;
+	if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\LogonUI\\CLH_GINA", 0, KEY_READ, &hKey) != ERROR_SUCCESS)
+		return defaultValue;
+
+	DWORD dwType, dwData, dwSize = sizeof(dwData);
+	if (RegQueryValueExW(hKey, lpValueName, NULL, &dwType, (LPBYTE)&dwData, &dwSize) != ERROR_SUCCESS)
+	{
+		RegCloseKey(hKey);
+		return defaultValue;
+	}
+
+	RegCloseKey(hKey);
+	return dwData;
+}
+
+bool GetConfigString(LPCWSTR lpValueName, LPWSTR lpBuffer, DWORD dwBufferSize, LPCWSTR lpDefaultValue)
+{
+	if (!lpBuffer || !dwBufferSize)
+		return false;
+	HKEY hKey;
+	if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\LogonUI\\CLH_GINA", 0, KEY_READ, &hKey) != ERROR_SUCCESS)
+		return false;
+	DWORD dwType, dwSize = dwBufferSize;
+	if (RegQueryValueExW(hKey, lpValueName, NULL, &dwType, (LPBYTE)lpBuffer, &dwSize) != ERROR_SUCCESS)
+	{
+		if (lpDefaultValue)
+		{
+			wcscpy_s(lpBuffer, dwBufferSize, lpDefaultValue);
+			RegCloseKey(hKey);
+			return true;
+		}
+		RegCloseKey(hKey);
+		return false;
+	}
+	RegCloseKey(hKey);
+	return true;
 }
 
 bool GetUserLogonTime(LPSYSTEMTIME lpSystemTime)
@@ -251,43 +291,6 @@ LSTATUS GetUserRegHive(REGSAM samDesired, PHKEY phkResult)
 	if (!GetUserSid(lpUsername, szSid, 256))
 		return ERROR_INVALID_PARAMETER;
 	return RegOpenKeyExW(HKEY_USERS, szSid, 0, samDesired, phkResult);
-}
-
-COLORREF GetBgColorFromRegistry()
-{
-	if (!IsSystemUser())
-	{
-		// GetSysColor works correctly in the secure desktop of a session with logged on user.
-		return GetSysColor(COLOR_BACKGROUND);
-	}
-	HKEY hKey;
-	if (ERROR_SUCCESS != RegOpenKeyExW(
-		HKEY_CURRENT_USER,
-		L"Control Panel\\Colors",
-		NULL,
-		KEY_READ,
-		&hKey
-	))
-		return GetSysColor(COLOR_BACKGROUND);
-	WCHAR szValue[256];
-	DWORD cbData = sizeof(szValue);
-	if (ERROR_SUCCESS != RegQueryValueExW(
-		hKey,
-		L"Background",
-		NULL,
-		NULL,
-		(LPBYTE)szValue,
-		&cbData
-	))
-	{
-		RegCloseKey(hKey);
-		return GetSysColor(COLOR_BACKGROUND);
-	}
-	RegCloseKey(hKey);
-	int r, g, b;
-	if (3 != swscanf_s(szValue, L"%d %d %d", &r, &g, &b))
-		return GetSysColor(COLOR_BACKGROUND);
-	return RGB(r, g, b);
 }
 
 void EmergencyRestart()

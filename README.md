@@ -1,17 +1,5 @@
-# ConsoleLogonHook
-Welcome!
-
-This project hooks onto and provides a graphical user interface for the console logon screen in Windows 10.
-
-> [!WARNING]
-> CREDITS GO TO @mishaproductions FOR THE DUI LIBRARY
-> 
-> https://github.com/MishaProductions/dui70
-> 
-> check out the original repo for the dui library here
-> 
-> i was too lazy to properly embed into the clh repo
-
+# CLH_GINA
+* Fork of ConsoleLogonHook that uses resources from msgina.dll from Windows 2000 or XP to create a GINA-like logon screen.
 
 > [!WARNING]
 > **THIS PROJECT IS IN EARLY DEVELOPMENT AND MIGHT BE UNSTABLE**
@@ -34,11 +22,9 @@ The following steps explain how you can contribute to the project
 > **This will require administrator privileges to be installed.**
 >
 
-1. Copy the 2 DLL files (ConsoleLogonHook.dll and ConsoleLogonUI.dll) from [Releases](https://github.com/wiktorwiktor12/ConsoleLogonHook/releases) into %SYSTEMROOT%\System32
+* If you have installed the original ConsoleLogonHook, only replace ConsoleLogonUI.dll from this repository and proceed to step 4.
 
-~~2. Take `authui.dll` from Windows 7 SP1, rename it to `au7hui.dll` and place it into %SYSTEMROOT%\System32, Or alternatively, just copy au7hui.dll from releases. This is required, as ConsoleLogonHook will push resources from it to use in the logon screen.~~ No longer necessary as of v1.0.6
-
-~~3. Take ownership of `ConsoleLogon.dll` and replace it with the version from [Releases](https://github.com/wiktorwiktor12/ConsoleLogonHook/releases), this a temporary solution until a pdb offset finder system is added in.~~ **No longer necessary as of v1.0.3**
+1. Copy the 2 DLL files (ConsoleLogonHook.dll and ConsoleLogonUI.dll) from [Releases](https://github.com/Ingan121/CLH_GINA/releases) into %SYSTEMROOT%\System32
 
 2. Open a CMD window as TrustedInstaller via PsExec64 and copy and paste the following commands:
 
@@ -55,3 +41,23 @@ or merge the regkey in the release zip as trusted installer.
 
 
 3. Take ownership of the file `Windows.UI.Logon.dll` and rename it to something else. Example: `Windows.UI.Logon.dll.bak`, this is required as it will force the use of the console logon screen.
+
+4. Get a copy of `msgina.dll` from Windows 2000 or XP and place it in `%SYSTEMROOT%\System32`.
+
+## Registry keys
+* (RECOMMENDED) Disable the lockscreen
+	* Create a DWORD value named `DisableLockScreen` in `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Personalization` and set it to `1`.
+* To manually type the username, create a DWORD value named `DontDisplayLastUserName` in `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` and set it to `1`.`
+	* This is optional, as CLH_GINA handles the friendly logon as well.
+* To enable verbose logon messages, create a DWORD value named `VerboseStatus` in `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` and set it to `1`.
+* Registry keys specific to CLH_GINA is available at `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\CLH_GINA`
+	* `ShowConsole` - Set to `1` to show the console window.
+	* `ClassicTheme` - Set to `1` to make the windows use the classic theme. Set to `0` to use the default theme. If the value is not present, themes will only be enabled if the provided `msgina.dll` is from Windows XP.
+	* `CustomWallHost` - Set to the path of the host process for the custom wallpaper. If the value is not present, CLH_GINA's custom wallpaper implementation will be used. Note that `WallpaperHost.exe` doesn't work in some cases, and the position of the wallpaper may be incorrect.
+* Customizing the pre-logon background and color scheme
+	* Color scheme: `HKEY_USERS\S-1-5-18\Control Panel\Colors`. It is recommend to run [WinClassicThemeConfig](https://gitlab.com/ftortoriello/WinClassicThemeConfig) as `NT AUTHORITY\SYSTEM` with [PsExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) or [gsudo](https://github.com/gerardog/gsudo) to change the color scheme of the logon screen.
+	* Rename `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\DefaultColors\Standard` to something else to prevent reverting to the default color scheme.
+	* Background color: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Background`, default is `0 0 0` (black). Delete the value to use the background color from the color scheme.
+	* Background image: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\Wallpaper`.
+	* Background image style: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\WallpaperStyle`, default is `0` (centered). Set to `2` for stretched, `6` for fit, and `10` for fill.
+	* Set `HKEY_USERS\S-1-5-18\Control Panel\Desktop\TileWallpaper` to `1` to tile the background image.

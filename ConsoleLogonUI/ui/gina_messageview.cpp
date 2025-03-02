@@ -19,9 +19,9 @@ std::mutex messageViewMutex;
 void external::MessageView_SetActive()
 {
 	std::lock_guard<std::mutex> lock(messageViewMutex);
-#ifndef SHOWCONSOLE
-	HideConsoleUI();
-#endif
+	if (ginaManager::Get()->hGinaDll && !ginaManager::Get()->config.showConsole) {
+		HideConsoleUI();
+	}
 
 	std::thread([=] {
 		if (isMessageViewActive.exchange(true)) {
@@ -36,17 +36,18 @@ void external::MessageView_SetActive()
 		int btnCount = controls.size();
 		int res = 0;
 
-#ifdef CLASSIC
-		std::thread([=] {
-			HWND hDlg = NULL;
-			while (!hDlg)
-			{
-				hDlg = FindWindowExW(0, 0, L"#32770", title);
-				Sleep(10);
-			}
-			MakeWindowClassic(hDlg);
-		}).detach();
-#endif
+		if (ginaManager::Get()->config.classicTheme)
+		{
+			std::thread([=] {
+				HWND hDlg = NULL;
+				while (!hDlg)
+				{
+					hDlg = FindWindowExW(0, 0, L"#32770", title);
+					Sleep(10);
+				}
+				MakeWindowClassic(hDlg);
+				}).detach();
+		}
 
 		if (btnCount <= 1)
 		{

@@ -75,9 +75,15 @@ void ginaShutdownView::Create(HWND parent)
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaShutdownView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_SHUTDOWN), parent, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaShutdownView::Get()->hDlg);
-#endif
+	if (!ginaShutdownView::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create shutdown dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		return;
+	}
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaShutdownView::Get()->hDlg);
+	}
 }
 
 void ginaShutdownView::Destroy()
@@ -109,7 +115,38 @@ void ginaShutdownView::BeginMessageLoop()
 	{
 		if (msg.message == WM_KEYDOWN)
 		{
-			DefWindowProcW(dlg->hDlg, msg.message, msg.wParam, msg.lParam);
+			switch (msg.wParam)
+			{
+			case VK_RETURN:
+			{
+				if (!TabSpace(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0])))
+				{
+					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
+				}
+			}
+			case VK_SPACE:
+			{
+				TabSpace(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]));
+				break;
+			}
+			case VK_ESCAPE:
+			{
+				SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
+				break;
+			}
+			case VK_TAB:
+			{
+				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+				{
+					TabPrev(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK);
+				}
+				else
+				{
+					TabNext(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK);
+				}
+				break;
+			}
+			}
 		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
@@ -164,8 +201,51 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&helpRect, 2);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&okRect, 2);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&cancelRect, 2);
-		SetWindowPos(hOkBtn, NULL, okRect.left + helpRect.right - helpRect.left, okRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-		SetWindowPos(hCancelBtn, NULL, cancelRect.left + helpRect.right - helpRect.left, cancelRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+		SetWindowPos(hOkBtn, NULL, okRect.left + helpRect.right - helpRect.left + 8, okRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+		SetWindowPos(hCancelBtn, NULL, cancelRect.left + helpRect.right - helpRect.left + 8, cancelRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+
+		// Hide the shutdown tracker (XP only)
+		HWND hShutdownTracker = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_GROUP);
+		if (hShutdownTracker)
+		{
+			ShowWindow(hShutdownTracker, SW_HIDE);
+			HWND hShutdownTrackerDesc = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC);
+			HWND hShutdownTrackerBooted = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_BOOTED);
+			HWND hShutdownTrackerOptionsLabel = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_LABEL);
+			HWND hShutdownTrackerOptionsCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_COMBO);
+			HWND hShutdownTrackerOptionsDesc = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_DESC);
+			HWND hShutdownTrackerDescLabel = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC_LABEL);
+			HWND hShutdownTrackerDescEdit = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC_EDIT);
+			ShowWindow(hShutdownTrackerDesc, SW_HIDE);
+			ShowWindow(hShutdownTrackerBooted, SW_HIDE);
+			ShowWindow(hShutdownTrackerOptionsLabel, SW_HIDE);
+			ShowWindow(hShutdownTrackerOptionsCombo, SW_HIDE);
+			ShowWindow(hShutdownTrackerOptionsDesc, SW_HIDE);
+			ShowWindow(hShutdownTrackerDescLabel, SW_HIDE);
+			ShowWindow(hShutdownTrackerDescEdit, SW_HIDE);
+
+			RECT trackerRect;
+			GetWindowRect(hShutdownTracker, &trackerRect);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&trackerRect, 2);
+			int trackerHeight = trackerRect.bottom - trackerRect.top;
+			RECT dlgRect;
+			GetWindowRect(hWnd, &dlgRect);
+
+			RECT okRect, cancelRect;
+			HWND hOkBtn = GetDlgItem(hWnd, IDC_OK);
+			HWND hCancelBtn = GetDlgItem(hWnd, IDC_CANCEL);
+			GetWindowRect(hOkBtn, &okRect);
+			GetWindowRect(hCancelBtn, &cancelRect);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&okRect, 2);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&cancelRect, 2);
+			SetWindowPos(hOkBtn, NULL, okRect.left, okRect.top - trackerHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+			SetWindowPos(hCancelBtn, NULL, cancelRect.left, cancelRect.top - trackerHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+
+			RECT dlgRectNew;
+			GetWindowRect(hWnd, &dlgRectNew);
+			int dlgHeight = dlgRectNew.bottom - dlgRectNew.top;
+			SetWindowPos(hWnd, NULL, dlgRectNew.left, dlgRectNew.top, dlgRectNew.right - dlgRectNew.left, dlgHeight - trackerHeight, SWP_NOZORDER);
+		}
 
 		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 	}
@@ -247,11 +327,12 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
 		rect.bottom = GINA_SMALL_BRD_HEIGHT;
-#ifdef XP
-		HBRUSH hBrush = CreateSolidBrush(RGB(90, 124, 223));
-#else
-		HBRUSH hBrush = CreateSolidBrush(RGB(255, 255, 255));
-#endif
+		COLORREF brdColor = RGB(255, 255, 255);
+		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+		{
+			brdColor = RGB(90, 124, 223);
+		}
+		HBRUSH hBrush = CreateSolidBrush(brdColor);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
@@ -289,9 +370,15 @@ void ginaLogoffView::Create(HWND parent)
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 	ginaLogoffView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_LOGOFF), parent, (DLGPROC)DlgProc, 0);
-#ifdef CLASSIC
-	MakeWindowClassic(ginaLogoffView::Get()->hDlg);
-#endif
+	if (!ginaLogoffView::Get()->hDlg)
+	{
+		MessageBoxW(0, L"Failed to create logoff dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
+		return;
+	}
+	if (ginaManager::Get()->config.classicTheme)
+	{
+		MakeWindowClassic(ginaLogoffView::Get()->hDlg);
+	}
 }
 
 void ginaLogoffView::Destroy()
@@ -321,6 +408,35 @@ void ginaLogoffView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
+		if (msg.message == WM_KEYDOWN)
+		{
+			switch (msg.wParam)
+			{
+			case VK_RETURN:
+			case VK_SPACE:
+			{
+				TabSpace(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]));
+				break;
+			}
+			case VK_ESCAPE:
+			{
+				SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
+				break;
+			}
+			case VK_TAB:
+			{
+				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+				{
+					TabPrev(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK);
+				}
+				else
+				{
+					TabNext(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK);
+				}
+				break;
+			}
+			}
+		}
 		TranslateMessage(&msg);
 		DispatchMessageW(&msg);
 	}
