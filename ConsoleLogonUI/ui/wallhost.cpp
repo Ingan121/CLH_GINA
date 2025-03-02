@@ -167,7 +167,7 @@ void wallHost::Create()
 	wc.hInstance = hInstance;
 	wc.lpszClassName = L"ClhGinaWallHost";
 	RegisterClass(&wc);
-	wallHost::Get()->hWnd = CreateWindowExW(0, L"ClhGinaWallHost", L"CLH_GINA Wallpaper Host", WS_POPUP | WS_VISIBLE, 0, 0, screenRect.right, screenRect.bottom, 0, 0, hInstance, 0);
+	wallHost::Get()->hWnd = CreateWindowExW(WS_EX_TOOLWINDOW, L"ClhGinaWallHost", L"CLH_GINA Wallpaper Host", WS_POPUP | WS_VISIBLE, 0, 0, screenRect.right, screenRect.bottom, 0, 0, hInstance, 0);
 	SetWindowPos(wallHost::Get()->hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
 	LoadWallpaper();
