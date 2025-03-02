@@ -146,6 +146,28 @@ void ginaShutdownView::BeginMessageLoop()
 				}
 				break;
 			}
+			case VK_LEFT:
+			case VK_UP:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabPrev(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
+			case VK_RIGHT:
+			case VK_DOWN:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabNext(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
 			}
 		}
 		TranslateMessage(&msg);
@@ -432,6 +454,28 @@ void ginaLogoffView::BeginMessageLoop()
 				else
 				{
 					TabNext(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK);
+				}
+				break;
+			}
+			case VK_LEFT:
+			case VK_UP:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabPrev(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
+			case VK_RIGHT:
+			case VK_DOWN:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabNext(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK, TRUE);
 				}
 				break;
 			}

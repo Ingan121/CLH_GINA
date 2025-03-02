@@ -125,7 +125,7 @@ static int GetTabIndexOfFocus(HWND hDlg, int tabIndex[], int size)
 	return -1;
 }
 
-static void TabNext(HWND hDlg, int tabIndex[], int size, int defaultFocus)
+static void TabNext(HWND hDlg, int tabIndex[], int size, int defaultFocus, BOOL stopAtEnd = FALSE)
 {
 	int index = GetTabIndexOfFocus(hDlg, tabIndex, size);
 	if (index == -1)
@@ -135,14 +135,33 @@ static void TabNext(HWND hDlg, int tabIndex[], int size, int defaultFocus)
 
 	HWND hCurrent = GetFocus();
 	SendMessage(hCurrent, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
-
+	HWND hDefault = GetDlgItem(hDlg, defaultFocus);
+	SendMessage(hDefault, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
 	index++;
+
 	if (index >= size)
 	{
+		if (stopAtEnd)
+		{
+			return;
+		}
 		index = 0;
 	}
 
 	HWND hNext = GetDlgItem(hDlg, tabIndex[index]);
+	if (!hNext || !IsWindowEnabled(hNext))
+	{
+		index += 1;
+		if (index >= size)
+		{
+			if (stopAtEnd)
+			{
+				return;
+			}
+			index = 0;
+		}
+		hNext = GetDlgItem(hDlg, tabIndex[index]);
+	}
 	wchar_t className[256];
 	GetClassName(hNext, className, 256);
 	SetFocus(hNext);
@@ -156,7 +175,7 @@ static void TabNext(HWND hDlg, int tabIndex[], int size, int defaultFocus)
 	}
 }
 
-static void TabPrev(HWND hDlg, int tabIndex[], int size, int defaultFocus)
+static void TabPrev(HWND hDlg, int tabIndex[], int size, int defaultFocus, BOOL stopAtFirst = FALSE)
 {
 	int index = GetTabIndexOfFocus(hDlg, tabIndex, size);
 	if (index == -1)
@@ -167,15 +186,32 @@ static void TabPrev(HWND hDlg, int tabIndex[], int size, int defaultFocus)
 	HWND hCurrent = GetFocus();
 	SendMessage(hCurrent, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
 	HWND hDefault = GetDlgItem(hDlg, defaultFocus);
-	SendMessage(hDefault, BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
+	SendMessage(hDefault, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
 
 	index--;
 	if (index < 0)
 	{
+		if (stopAtFirst)
+		{
+			return;
+		}
 		index = size - 1;
 	}
 
 	HWND hPrev = GetDlgItem(hDlg, tabIndex[index]);
+	if (!hPrev || !IsWindowEnabled(hPrev))
+	{
+		index -= 1;
+		if (index < 0)
+		{
+			if (stopAtFirst)
+			{
+				return;
+			}
+			index = size - 1;
+		}
+		hPrev = GetDlgItem(hDlg, tabIndex[index]);
+	}
 	wchar_t className[256];
 	GetClassName(hPrev, className, 256);
 	SetFocus(hPrev);
@@ -206,19 +242,6 @@ static BOOL TabSpace(HWND hDlg, int tabIndex[], int size)
 	}
 	return FALSE;
 }
-
-//static void TabEnter(HWND hDlg, int tabIndex[], int size)
-//{
-//	for (int i = 0; i < size; i++)
-//	{
-//		HWND hButton = GetDlgItem(hDlg, tabIndex[i]);
-//		if (SendMessage(hButton, BM_GETSTATE, 0, 0) & BS_DEFPUSHBUTTON)
-//		{
-//			SendMessage(hDlg, WM_COMMAND, MAKEWPARAM(tabIndex[i], BN_CLICKED), 0);
-//			break;
-//		}
-//	}
-//}
 
 DWORD GetLoggedOnUserInfo(LPWSTR lpUsername, UINT cchUsernameMax, LPWSTR lpDomain, UINT cchDomainMax);
 int GetLastLogonUser(LPWSTR lpUsername, UINT cchUsernameMax);

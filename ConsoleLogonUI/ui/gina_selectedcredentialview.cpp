@@ -179,7 +179,6 @@ void ginaSelectedCredentialView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-
 		if (msg.message == WM_KEYDOWN)
 		{
 			switch (msg.wParam)
@@ -213,6 +212,29 @@ void ginaSelectedCredentialView::BeginMessageLoop()
 				else
 				{
 					TabNext(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK);
+				}
+				break;
+			}
+
+			case VK_LEFT:
+			case VK_UP:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabPrev(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
+			case VK_RIGHT:
+			case VK_DOWN:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabNext(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK, TRUE);
 				}
 				break;
 			}
@@ -540,6 +562,29 @@ void ginaSelectedCredentialViewLocked::BeginMessageLoop()
 				}
 				break;
 			}
+
+			case VK_LEFT:
+			case VK_UP:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabPrev(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
+			case VK_RIGHT:
+			case VK_DOWN:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabNext(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
 			}
 		}
 		TranslateMessage(&msg);
@@ -754,6 +799,28 @@ void ginaChangePwdView::BeginMessageLoop()
 				}
 				break;
 			}
+			case VK_LEFT:
+			case VK_UP:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabPrev(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
+			case VK_RIGHT:
+			case VK_DOWN:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabNext(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK, TRUE);
+				}
+				break;
+			}
 			}
 		}
 		TranslateMessage(&msg);
@@ -771,6 +838,9 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		GetLoggedOnUserInfo(lpUsername, 256, lpDomain, 256);
 		SetDlgItemTextW(hWnd, IDC_CHPW_USERNAME, lpUsername);
 		EnableWindow(GetDlgItem(hWnd, IDC_CHPW_DOMAIN), FALSE);
+		wchar_t thisComputer[256];
+		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_THIS_COMPUTER, thisComputer, 256);
+		wcscat_s(lpDomain, thisComputer);
 		SetDlgItemTextW(hWnd, IDC_CHPW_DOMAIN, lpDomain);
 
 		HWND hBackup = GetDlgItem(hWnd, IDC_CHPW_BACKUP);

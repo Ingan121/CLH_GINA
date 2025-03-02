@@ -127,6 +127,28 @@ void ginaSecurityControl::BeginMessageLoop()
 				}
 				break;
 			}
+			case VK_LEFT:
+			case VK_UP:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabPrev(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0], TRUE);
+				}
+				break;
+			}
+			case VK_RIGHT:
+			case VK_DOWN:
+			{
+				wchar_t className[256];
+				GetClassNameW(GetFocus(), className, 256);
+				if (wcscmp(className, L"Button") == 0)
+				{
+					TabNext(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0], TRUE);
+				}
+				break;
+			}
 			}
 		}
 		TranslateMessage(&msg);
