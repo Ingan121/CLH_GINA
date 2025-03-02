@@ -58,7 +58,11 @@ void ginaStatusView::Create()
 		external::ShowConsoleUI();
 		return;
 	}
-	PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
+	if (ginaManager::Get()->config.hideStatusView)
+	{
+		ShowWindow(ginaStatusView::Get()->hDlg, SW_HIDE);
+	}
+	ginaManager::Get()->PostThemeChange();
 	if (ginaManager::Get()->config.classicTheme)
 	{
 		MakeWindowClassic(ginaStatusView::Get()->hDlg);
@@ -77,6 +81,10 @@ void ginaStatusView::Destroy()
 
 void ginaStatusView::Show()
 {
+	if (ginaManager::Get()->config.hideStatusView)
+	{
+		return;
+	}
 	ginaStatusView* dlg = ginaStatusView::Get();
 	CenterWindow(dlg->hDlg);
 	ShowWindow(dlg->hDlg, SW_SHOW);

@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include "gina_manager.h"
+#include "wallhost.h"
 #include <thread>
 #include "util/util.h"
 #include "util/interop.h"
@@ -80,7 +81,7 @@ void ginaManager::LoadGina()
 		if (!ginaVersion || ginaVersion < GINA_VER_2K)
 		{
 			std::thread([] {
-				MessageBoxW(0, L"This version of msgina.dll is not supported yet! Please use a msgina.dll from Windows 2000 or XP.", L"CLH_GINA", MB_OK | MB_ICONERROR);
+				MessageBoxW(0, L"This version of msgina.dll is not supported in this build of CLH_GINA! Please use a msgina.dll from Windows 2000 or XP.", L"CLH_GINA", MB_OK | MB_ICONERROR);
 			}).detach();
 			FreeLibrary(hGinaDll);
 			hGinaDll = NULL;
@@ -106,13 +107,23 @@ void ginaManager::LoadGina()
 		config.classicTheme = classicTheme;
 	}
 
+	int hideStatusView = GetConfigInt(L"HideStatusView", -1);
+	if (hideStatusView == -1)
+	{
+		config.hideStatusView = ginaVersion == GINA_VER_NT4;
+	}
+	else
+	{
+		config.hideStatusView = hideStatusView;
+	}
+
 	// Last resort to show console if something goes wrong
 	std::thread([] {
 		int cnt = 0;
 		while (true)
 		{
 			HWND hDlg = FindWindow(L"#32770", NULL);
-			if (hDlg && IsWindowVisible(hDlg))
+			if (hDlg)
 			{
 				cnt = 0;
 			}
@@ -203,4 +214,14 @@ void ginaManager::CloseAllDialogs()
 	ginaSecurityControl::Get()->Destroy();
 	ginaStatusView::Get()->Destroy();
 	ginaUserSelect::Get()->Destroy();
+}
+
+void ginaManager::PostThemeChange()
+{
+	PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaSelectedCredentialView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaChangePwdView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaSecurityControl::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaStatusView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaUserSelect::Get()->hDlg, WM_THEMECHANGED, 0, 0);
 }

@@ -32,17 +32,6 @@
 #define GINA_STR_LOGOFF 8010
 #define GINA_STR_LOGOFF_DESC 8011
 
-static int shutdownTabIndex[] = {
-	IDC_SHUTDOWN_COMBO,
-	IDC_OK,
-	IDC_CANCEL,
-};
-
-static int logoffTabIndex[] = {
-	IDC_OK,
-	IDC_CANCEL,
-};
-
 void ShowShutdownDialog(HWND parent = NULL);
 void ShowLogoffDialog(HWND parent = NULL);
 

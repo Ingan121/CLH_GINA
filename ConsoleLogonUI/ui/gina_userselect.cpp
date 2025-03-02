@@ -145,24 +145,11 @@ void ginaUserSelect::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			if (msg.wParam == VK_RETURN || msg.wParam == VK_ESCAPE)
-			{
-				if (msg.wParam == VK_RETURN)
-				{
-					// Handle Enter key
-					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
-				}
-				else if (msg.wParam == VK_ESCAPE)
-				{
-					// Handle Esc key
-					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
-				}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 

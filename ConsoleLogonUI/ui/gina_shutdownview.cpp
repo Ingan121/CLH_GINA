@@ -113,65 +113,11 @@ void ginaShutdownView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			{
-				if (!TabSpace(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0])))
-				{
-					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
-				}
-			}
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK);
-				}
-				break;
-			}
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 
@@ -430,59 +376,11 @@ void ginaLogoffView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK);
-				}
-				break;
-			}
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 

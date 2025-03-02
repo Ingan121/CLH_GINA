@@ -98,61 +98,11 @@ void ginaSecurityControl::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				KEY_EVENT_RECORD rec;
-				rec.wVirtualKeyCode = VK_ESCAPE;
-				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0]);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0]);
-				}
-				break;
-			}
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0], TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0], TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 

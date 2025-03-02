@@ -44,6 +44,7 @@
 struct ginaConfig {
 	BOOL showConsole;
 	BOOL classicTheme;
+	BOOL hideStatusView;
 };
 
 class ginaManager
@@ -70,4 +71,5 @@ public:
 	void LoadBranding(HWND hDlg, BOOL isLarge, BOOL noBarAsImgCtrl = FALSE);
 
 	void CloseAllDialogs();
+	void PostThemeChange();
 };

@@ -1,5 +1,5 @@
 # CLH_GINA
-* Fork of ConsoleLogonHook that uses resources from msgina.dll from Windows 2000 or XP to create a GINA-like logon screen.
+* Fork of ConsoleLogonHook that uses resources from msgina.dll from Windows NT 4.0, 2000, or XP to create a GINA-like logon screen.
 
 > [!WARNING]
 > **THIS PROJECT IS IN EARLY DEVELOPMENT AND MIGHT BE UNSTABLE**
@@ -25,6 +25,7 @@ The following steps explain how you can contribute to the project
 * If you have installed the original ConsoleLogonHook, only replace ConsoleLogonUI.dll from this repository and proceed to step 4.
 
 1. Copy the 2 DLL files (ConsoleLogonHook.dll and ConsoleLogonUI.dll) from [Releases](https://github.com/Ingan121/CLH_GINA/releases) into %SYSTEMROOT%\System32
+	* Use the NT4 version of ConsoleLogonUI.dll if you want to use the NT4 version of msgina.dll. Otherwise, use the 2000/XP version.
 
 2. Open a CMD window as TrustedInstaller via PsExec64 and copy and paste the following commands:
 
@@ -42,7 +43,8 @@ or merge the regkey in the release zip as trusted installer.
 
 3. Take ownership of the file `Windows.UI.Logon.dll` and rename it to something else. Example: `Windows.UI.Logon.dll.bak`, this is required as it will force the use of the console logon screen.
 
-4. Get a copy of `msgina.dll` from Windows 2000 or XP and place it in `%SYSTEMROOT%\System32`.
+4. Get a copy of `msgina.dll` from Windows NT 4.0, 2000, or XP and place it in `%SYSTEMROOT%\System32`.
+	* NT4 only: If you want to use non-English versions of `msgina.dll`, you need to delete English resources from the DLL. You can use [Resource Hacker](http://www.angusj.com/resourcehacker/) to do this.
 
 ## Registry keys
 * (RECOMMENDED) Disable the lockscreen
@@ -53,7 +55,9 @@ or merge the regkey in the release zip as trusted installer.
 * Registry keys specific to CLH_GINA is available at `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\CLH_GINA`
 	* `ShowConsole` - Set to `1` to show the console window.
 	* `ClassicTheme` - Set to `1` to make the windows use the classic theme. Set to `0` to use the default theme. If the value is not present, themes will only be enabled if the provided `msgina.dll` is from Windows XP.
+	* `HideStatusView` - Set to `1` to hide the status view. Set to `0` to show the status view. If the value is not present, the status view will be hidden if the provided `msgina.dll` is from Windows NT 4.0.
 	* `CustomWallHost` - Set to the path of the host process for the custom wallpaper. If the value is not present, CLH_GINA's custom wallpaper implementation will be used. Note that `WallpaperHost.exe` doesn't work in some cases, and the position of the wallpaper may be incorrect.
+	* `CustomWallHostArgs` - Set to the arguments for the custom wallpaper host process.
 * Customizing the pre-logon background and color scheme
 	* Color scheme: `HKEY_USERS\S-1-5-18\Control Panel\Colors`. It is recommend to run [WinClassicThemeConfig](https://gitlab.com/ftortoriello/WinClassicThemeConfig) as `NT AUTHORITY\SYSTEM` with [PsExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) or [gsudo](https://github.com/gerardog/gsudo) to change the color scheme of the logon screen.
 	* Rename `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\DefaultColors\Standard` to something else to prevent reverting to the default color scheme.

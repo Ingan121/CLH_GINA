@@ -179,69 +179,11 @@ void ginaSelectedCredentialView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			{
-				if (!TabSpace(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0])))
-				{
-					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
-				}
-				break;
-			}
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				KEY_EVENT_RECORD rec;
-				rec.wVirtualKeyCode = VK_ESCAPE;
-				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK);
-				}
-				break;
-			}
-
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, credViewTabIndex, sizeof(credViewTabIndex) / sizeof(credViewTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 
@@ -487,7 +429,7 @@ void ginaSelectedCredentialViewLocked::Create()
 		// So the locked window opens right after boot
 		// But this somehow doesn't fire the WM_THEMECHANGED message to the wallhost
 		// So we need to manually send it
-		PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
+		ginaManager::Get()->PostThemeChange();
 	}
 	WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
 	WCHAR szFormat[256], szText[1024];
@@ -526,69 +468,11 @@ void ginaSelectedCredentialViewLocked::BeginMessageLoop()
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
 
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			{
-				if (!TabSpace(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0])))
-				{
-					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
-				}
-				break;
-			}
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				KEY_EVENT_RECORD rec;
-				rec.wVirtualKeyCode = VK_ESCAPE;
-				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK);
-				}
-				break;
-			}
-
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, credViewLockedTabIndex, sizeof(credViewLockedTabIndex) / sizeof(credViewLockedTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 
@@ -763,68 +647,11 @@ void ginaChangePwdView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			{
-				if (!TabSpace(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0])))
-				{
-					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
-				}
-				break;
-			}
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				KEY_EVENT_RECORD rec;
-				rec.wVirtualKeyCode = VK_ESCAPE;
-				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK);
-				}
-				break;
-			}
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, chpwTabIndex, sizeof(chpwTabIndex) / sizeof(chpwTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 
@@ -855,7 +682,7 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 	}
 	case WM_COMMAND:
 	{
-		if (LOWORD(wParam) == 1)
+		if (LOWORD(wParam) == IDC_OK)
 		{
 			// OK button
 			wchar_t username[256];
@@ -866,6 +693,22 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 			GetDlgItemTextW(hWnd, IDC_CHPW_OLD_PASSWORD, oldPassword, 256);
 			GetDlgItemTextW(hWnd, IDC_CHPW_NEW_PASSWORD, newPassword, 256);
 			GetDlgItemTextW(hWnd, IDC_CHPW_CONFIRM_PASSWORD, confirmPassword, 256);
+
+			if (wcscmp(newPassword, confirmPassword) != 0)
+			{
+				wchar_t title[256], msg[256];
+				LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_CHPW_TITLE, title, 256);
+				wcscat_s(title, 256, L" "); // Just to let MakeWindowClassicAsync differentiate the message box and this dialog
+				LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_CHPW_CONFIRM_MISMATCH, msg, 256);
+
+				if (ginaManager::Get()->config.classicTheme)
+				{
+					MakeWindowClassicAsync(title);
+				}
+
+				MessageBoxW(hWnd, msg, title, MB_OK | MB_ICONERROR);
+				return 0;
+			}
 			
 			editControls[0].SetInputtedText(username);
 			editControls[1].SetInputtedText(oldPassword);
@@ -876,7 +719,7 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 			rec.wVirtualKeyCode = VK_RETURN; //forward it to consoleuiview
 			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 		}
-		else if (LOWORD(wParam) == 2)
+		else if (LOWORD(wParam) == IDC_CANCEL)
 		{
 			// Cancel button
 			KEY_EVENT_RECORD rec;

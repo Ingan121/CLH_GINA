@@ -21,9 +21,11 @@ void InitWallHost()
 	wchar_t customWallHost[MAX_PATH];
 	if (GetConfigString(L"CustomWallHost", customWallHost, MAX_PATH)) {
 		if (std::filesystem::exists(customWallHost)) {
+			wchar_t customWallHostArgs[MAX_PATH];
+			GetConfigString(L"CustomWallHostArgs", customWallHostArgs, MAX_PATH);
 			PROCESS_INFORMATION pi;
 			STARTUPINFO si = { sizeof(si) };
-			if (CreateProcessW(customWallHost, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+			if (CreateProcessW(customWallHost, customWallHostArgs, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
 				g_sWallHostProcess = pi.hProcess;
 				CloseHandle(pi.hThread);
 				return;
