@@ -44,7 +44,6 @@ or merge the regkey in the release zip as trusted installer.
 3. Take ownership of the file `Windows.UI.Logon.dll` and rename it to something else. Example: `Windows.UI.Logon.dll.bak`, this is required as it will force the use of the console logon screen.
 
 4. Get a copy of `msgina.dll` from Windows NT 4.0, 2000, or XP and place it in `%SYSTEMROOT%\System32`.
-	* NT4 only: If you want to use non-English versions of `msgina.dll`, you need to delete English resources from the DLL. You can use [Resource Hacker](http://www.angusj.com/resourcehacker/) to do this.
 
 ## Registry keys
 * (RECOMMENDED) Disable the lockscreen
