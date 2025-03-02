@@ -113,65 +113,11 @@ void ginaShutdownView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			{
-				if (!TabSpace(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0])))
-				{
-					SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_OK, BN_CLICKED), 0);
-				}
-			}
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK);
-				}
-				break;
-			}
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, shutdownTabIndex, sizeof(shutdownTabIndex) / sizeof(shutdownTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 
@@ -182,157 +128,44 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 	case WM_INITDIALOG:
 	{
 		HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-
+		HINSTANCE hShell32 = LoadLibraryExW(L"shell32.dll", NULL, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+		if (!hShell32)
+		{
+			break;
+		}
 		HWND hShutdownIcon = GetDlgItem(hWnd, IDC_SHUTDOWN_ICON);
-		SendMessageW(hShutdownIcon, STM_SETICON, (WPARAM)LoadIconW(hGinaDll, MAKEINTRESOURCEW(IDI_SHUTDOWN)), 0);
+		SendMessageW(hShutdownIcon, STM_SETICON, (WPARAM)LoadImageW(hShell32, MAKEINTRESOURCEW(SHELL32_INFO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_VGACOLOR), 0);
+		FreeLibrary(hShell32);
 
-		// Populate shutdown combo
-		HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
-		wchar_t shutdownStr[256];
-		if (!IsSystemUser())
-		{
-			wchar_t logoffStr[256], username[MAX_PATH], domain[MAX_PATH];
-			GetLoggedOnUserInfo(username, MAX_PATH, domain, MAX_PATH);
-			LoadStringW(hGinaDll, GINA_STR_LOGOFF, logoffStr, 256);
-			swprintf_s(shutdownStr, logoffStr, username);
-			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		}
-		LoadStringW(hGinaDll, GINA_STR_SHUTDOWN, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		LoadStringW(hGinaDll, GINA_STR_RESTART, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		LoadStringW(hGinaDll, GINA_STR_SLEEP, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		LoadStringW(hGinaDll, GINA_STR_HIBERNATE, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		SendMessageW(hShutdownCombo, CB_SETCURSEL, 2, 0);
+		// Hide power off option (no one uses non-ACPI systems anymore)
+		// And hide duplicate OK and Cancel buttons
+		HWND hPowerOff = GetDlgItem(hWnd, IDC_SHUTDOWN_POWEROFF);
+		HWND hOK = GetDlgItem(hWnd, IDC_SHUTDOWN_OK);
+		HWND hCancel = GetDlgItem(hWnd, IDC_SHUTDOWN_CANCEL);
+		ShowWindow(hPowerOff, SW_HIDE);
+		ShowWindow(hOK, SW_HIDE);
+		ShowWindow(hCancel, SW_HIDE);
 
-		wchar_t shutdownDesc[256];
-		LoadStringW(hGinaDll, GINA_STR_RESTART_DESC, shutdownDesc, 256);
-		SetDlgItemTextW(hWnd, IDC_SHUTDOWN_DESC, shutdownDesc);
-
-		// Hide help button and move the OK and Cancel buttons
-		HWND hHelpBtn = GetDlgItem(hWnd, IDC_SHUTDOWN_HELP);
-		ShowWindow(hHelpBtn, SW_HIDE);
-		HWND hOkBtn = GetDlgItem(hWnd, IDC_OK);
-		HWND hCancelBtn = GetDlgItem(hWnd, IDC_CANCEL);
-		RECT helpRect, okRect, cancelRect;
-		GetWindowRect(hHelpBtn, &helpRect);
-		GetWindowRect(hOkBtn, &okRect);
-		GetWindowRect(hCancelBtn, &cancelRect);
-		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&helpRect, 2);
-		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&okRect, 2);
-		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&cancelRect, 2);
-		SetWindowPos(hOkBtn, NULL, okRect.left + helpRect.right - helpRect.left + 8, okRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-		SetWindowPos(hCancelBtn, NULL, cancelRect.left + helpRect.right - helpRect.left + 8, cancelRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-
-		// Hide the shutdown tracker (XP only)
-		HWND hShutdownTracker = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_GROUP);
-		if (hShutdownTracker)
-		{
-			ShowWindow(hShutdownTracker, SW_HIDE);
-			HWND hShutdownTrackerDesc = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC);
-			HWND hShutdownTrackerBooted = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_BOOTED);
-			HWND hShutdownTrackerOptionsLabel = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_LABEL);
-			HWND hShutdownTrackerOptionsCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_COMBO);
-			HWND hShutdownTrackerOptionsDesc = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_DESC);
-			HWND hShutdownTrackerDescLabel = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC_LABEL);
-			HWND hShutdownTrackerDescEdit = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC_EDIT);
-			ShowWindow(hShutdownTrackerDesc, SW_HIDE);
-			ShowWindow(hShutdownTrackerBooted, SW_HIDE);
-			ShowWindow(hShutdownTrackerOptionsLabel, SW_HIDE);
-			ShowWindow(hShutdownTrackerOptionsCombo, SW_HIDE);
-			ShowWindow(hShutdownTrackerOptionsDesc, SW_HIDE);
-			ShowWindow(hShutdownTrackerDescLabel, SW_HIDE);
-			ShowWindow(hShutdownTrackerDescEdit, SW_HIDE);
-
-			RECT trackerRect;
-			GetWindowRect(hShutdownTracker, &trackerRect);
-			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&trackerRect, 2);
-			int trackerHeight = trackerRect.bottom - trackerRect.top;
-			RECT dlgRect;
-			GetWindowRect(hWnd, &dlgRect);
-
-			RECT okRect, cancelRect;
-			HWND hOkBtn = GetDlgItem(hWnd, IDC_OK);
-			HWND hCancelBtn = GetDlgItem(hWnd, IDC_CANCEL);
-			GetWindowRect(hOkBtn, &okRect);
-			GetWindowRect(hCancelBtn, &cancelRect);
-			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&okRect, 2);
-			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&cancelRect, 2);
-			SetWindowPos(hOkBtn, NULL, okRect.left, okRect.top - trackerHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-			SetWindowPos(hCancelBtn, NULL, cancelRect.left, cancelRect.top - trackerHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-
-			RECT dlgRectNew;
-			GetWindowRect(hWnd, &dlgRectNew);
-			int dlgHeight = dlgRectNew.bottom - dlgRectNew.top;
-			SetWindowPos(hWnd, NULL, dlgRectNew.left, dlgRectNew.top, dlgRectNew.right - dlgRectNew.left, dlgHeight - trackerHeight, SWP_NOZORDER);
-		}
-
-		ginaManager::Get()->LoadBranding(hWnd, FALSE);
+		// Check the shutdown checkbox
+		HWND hShutdown = GetDlgItem(hWnd, IDC_SHUTDOWN_SHUTDOWN);
+		SendMessageW(hShutdown, BM_SETCHECK, BST_CHECKED, 0);
+		break;
 	}
 	case WM_COMMAND:
 	{
-		if (HIWORD(wParam) == CBN_SELCHANGE)
+		if (LOWORD(wParam) == IDC_OK)
 		{
-			HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
-			int index = SendMessageW(hShutdownCombo, CB_GETCURSEL, 0, 0);
-			if (IsSystemUser())
+			int action = 0;
+			if (IsDlgButtonChecked(hWnd, IDC_SHUTDOWN_SHUTDOWN) == BST_CHECKED)
 			{
-				index += 1;
+				action = EWX_SHUTDOWN;
 			}
-			int descId = 0;
-			switch (index)
+			else if (IsDlgButtonChecked(hWnd, IDC_SHUTDOWN_RESTART) == BST_CHECKED)
 			{
-			case 0:
-				descId = GINA_STR_LOGOFF_DESC;
-				break;
-			case 1:
-				descId = GINA_STR_SHUTDOWN_DESC;
-				break;
-			case 2:
-				descId = GINA_STR_RESTART_DESC;
-				break;
-			case 3:
-				descId = GINA_STR_SLEEP_DESC;
-				break;
-			case 4:
-				descId = GINA_STR_HIBERNATE_DESC;
-				break;
+				action = EWX_REBOOT;
 			}
-			wchar_t shutdownDesc[256];
-			LoadStringW(ginaManager::Get()->hGinaDll, descId, shutdownDesc, 256);
-			SetDlgItemTextW(hWnd, IDC_SHUTDOWN_DESC, shutdownDesc);
-		}
-		else if (LOWORD(wParam) == IDC_OK)
-		{
-			HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
-			int index = SendMessageW(hShutdownCombo, CB_GETCURSEL, 0, 0);
-			if (IsSystemUser())
-			{
-				index += 1;
-			}
-
-			switch (index)
-			{
-			case 0:
-				ExitWindowsEx(EWX_LOGOFF, 0);
-				break;
-			case 1:
-				EnableShutdownPrivilege();
-				ExitWindowsEx(EWX_SHUTDOWN, 0);
-				break;
-			case 2:
-				EnableShutdownPrivilege();
-				ExitWindowsEx(EWX_REBOOT, 0);
-				break;
-			case 3:
-				SetSuspendState(FALSE, FALSE, FALSE);
-				break;
-			case 4:
-				SetSuspendState(TRUE, FALSE, FALSE);
-				break;
-			}
+			EnableShutdownPrivilege();
+			ExitWindowsEx(action, 0);
 
 			ginaShutdownView::Destroy();
 		}
@@ -340,31 +173,6 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		{
 			ginaShutdownView::Destroy();
 		}
-		break;
-	}
-	case WM_ERASEBKGND:
-	{
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = GINA_SMALL_BRD_HEIGHT;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = GINA_SMALL_BRD_HEIGHT + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
 		break;
 	}
 	case WM_CLOSE:
@@ -430,59 +238,11 @@ void ginaLogoffView::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				SendMessage(dlg->hDlg, WM_COMMAND, MAKEWPARAM(IDC_CANCEL, BN_CLICKED), 0);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK);
-				}
-				break;
-			}
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, logoffTabIndex, sizeof(logoffTabIndex) / sizeof(logoffTabIndex[0]), IDC_OK, TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 
@@ -493,8 +253,15 @@ int CALLBACK ginaLogoffView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	case WM_INITDIALOG:
 	{
 		HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-		HWND hLogoffIcon = GetDlgItem(hWnd, IDC_LOGOFF_ICON);
-		SendMessageW(hLogoffIcon, STM_SETICON, (WPARAM)LoadIconW(hGinaDll, MAKEINTRESOURCEW(IDI_LOGOFF)), 0);
+		HINSTANCE hShell32 = LoadLibraryExW(L"shell32.dll", NULL, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+		if (!hShell32)
+		{
+			break;
+		}
+		HWND hLogoffIcon = GetDlgItem(hWnd, IDC_SHUTDOWN_ICON);
+		SendMessageW(hLogoffIcon, STM_SETICON, (WPARAM)LoadImageW(hShell32, MAKEINTRESOURCEW(SHELL32_INFO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_VGACOLOR), 0);
+		FreeLibrary(hShell32);
+		break;
 	}
 	case WM_COMMAND:
 	{

@@ -10,6 +10,7 @@
 #include <lm.h>
 #include <Uxtheme.h>
 #include <dwmapi.h>
+#include <thread>
 
 #pragma comment(lib, "UxTheme.lib")
 #pragma comment(lib, "netapi32.lib")
@@ -112,135 +113,17 @@ static void MakeWindowClassic(HWND hWnd)
 	}
 }
 
-static int GetTabIndexOfFocus(HWND hDlg, int tabIndex[], int size)
+static void MakeWindowClassicAsync(const wchar_t* title)
 {
-	HWND hFocus = GetFocus();
-	for (int i = 0; i < size; i++)
-	{
-		if (hFocus == GetDlgItem(hDlg, tabIndex[i]))
+	std::thread([=] {
+		HWND hDlg = NULL;
+		while (!hDlg)
 		{
-			return i;
+			hDlg = FindWindowExW(0, 0, L"#32770", title);
+			Sleep(10);
 		}
-	}
-	return -1;
-}
-
-static void TabNext(HWND hDlg, int tabIndex[], int size, int defaultFocus, BOOL stopAtEnd = FALSE)
-{
-	int index = GetTabIndexOfFocus(hDlg, tabIndex, size);
-	if (index == -1)
-	{
-		return;
-	}
-
-	HWND hCurrent = GetFocus();
-	SendMessage(hCurrent, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
-	HWND hDefault = GetDlgItem(hDlg, defaultFocus);
-	SendMessage(hDefault, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
-	index++;
-
-	if (index >= size)
-	{
-		if (stopAtEnd)
-		{
-			return;
-		}
-		index = 0;
-	}
-
-	HWND hNext = GetDlgItem(hDlg, tabIndex[index]);
-	if (!hNext || !IsWindowEnabled(hNext))
-	{
-		index += 1;
-		if (index >= size)
-		{
-			if (stopAtEnd)
-			{
-				return;
-			}
-			index = 0;
-		}
-		hNext = GetDlgItem(hDlg, tabIndex[index]);
-	}
-	wchar_t className[256];
-	GetClassName(hNext, className, 256);
-	SetFocus(hNext);
-	if (wcscmp(className, L"Button") == 0)
-	{
-		SendMessage(hNext, BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
-	}
-	else
-	{
-		SendMessage(GetDlgItem(hDlg, defaultFocus), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
-	}
-}
-
-static void TabPrev(HWND hDlg, int tabIndex[], int size, int defaultFocus, BOOL stopAtFirst = FALSE)
-{
-	int index = GetTabIndexOfFocus(hDlg, tabIndex, size);
-	if (index == -1)
-	{
-		return;
-	}
-
-	HWND hCurrent = GetFocus();
-	SendMessage(hCurrent, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
-	HWND hDefault = GetDlgItem(hDlg, defaultFocus);
-	SendMessage(hDefault, BM_SETSTYLE, BS_PUSHBUTTON, TRUE);
-
-	index--;
-	if (index < 0)
-	{
-		if (stopAtFirst)
-		{
-			return;
-		}
-		index = size - 1;
-	}
-
-	HWND hPrev = GetDlgItem(hDlg, tabIndex[index]);
-	if (!hPrev || !IsWindowEnabled(hPrev))
-	{
-		index -= 1;
-		if (index < 0)
-		{
-			if (stopAtFirst)
-			{
-				return;
-			}
-			index = size - 1;
-		}
-		hPrev = GetDlgItem(hDlg, tabIndex[index]);
-	}
-	wchar_t className[256];
-	GetClassName(hPrev, className, 256);
-	SetFocus(hPrev);
-	if (wcscmp(className, L"Button") == 0)
-	{
-		SendMessage(hPrev, BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
-	}
-	else
-	{
-		SendMessage(GetDlgItem(hDlg, defaultFocus), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
-	}
-}
-
-static BOOL TabSpace(HWND hDlg, int tabIndex[], int size)
-{
-	int index = GetTabIndexOfFocus(hDlg, tabIndex, size);
-	if (index == -1)
-	{
-		return FALSE;
-	}
-	wchar_t className[256];
-	HWND hCurrent = GetDlgItem(hDlg, tabIndex[index]);
-	GetClassName(hCurrent, className, 256);
-	if (wcscmp(className, L"Button") == 0)
-	{
-		SendMessage(hDlg, WM_COMMAND, MAKEWPARAM(tabIndex[index], BN_CLICKED), 0);
-		return TRUE;
-	}
-	return FALSE;
+		MakeWindowClassic(hDlg);
+	}).detach();
 }
 
 DWORD GetLoggedOnUserInfo(LPWSTR lpUsername, UINT cchUsernameMax, LPWSTR lpDomain, UINT cchDomainMax);

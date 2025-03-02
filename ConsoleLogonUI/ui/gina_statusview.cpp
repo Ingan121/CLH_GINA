@@ -58,7 +58,11 @@ void ginaStatusView::Create()
 		external::ShowConsoleUI();
 		return;
 	}
-	PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
+	if (ginaManager::Get()->config.hideStatusView)
+	{
+		ShowWindow(ginaStatusView::Get()->hDlg, SW_HIDE);
+	}
+	ginaManager::Get()->PostThemeChange();
 	if (ginaManager::Get()->config.classicTheme)
 	{
 		MakeWindowClassic(ginaStatusView::Get()->hDlg);
@@ -77,6 +81,10 @@ void ginaStatusView::Destroy()
 
 void ginaStatusView::Show()
 {
+	if (ginaManager::Get()->config.hideStatusView)
+	{
+		return;
+	}
 	ginaStatusView* dlg = ginaStatusView::Get();
 	CenterWindow(dlg->hDlg);
 	ShowWindow(dlg->hDlg, SW_SHOW);
@@ -112,50 +120,10 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	{
 	case WM_INITDIALOG:
 	{
-		ginaManager::Get()->LoadBranding(hWnd, FALSE, TRUE);
-		SetTimer(hWnd, 20, 20, NULL);
-		break;
-	}
-	case WM_TIMER:
-	{
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int dlgWidth = rect.right - rect.left;
-		int barOffset = ginaStatusView::Get()->barOffset;
-		HWND bar1 = FindWindowExW(hWnd, NULL, L"STATIC", L"Bar");
-		HWND bar2 = FindWindowExW(hWnd, bar1, L"STATIC", L"Bar2");
-		SetWindowPos(bar1, NULL, barOffset, GINA_SMALL_BRD_HEIGHT, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-		SetWindowPos(bar2, NULL, barOffset - dlgWidth, GINA_SMALL_BRD_HEIGHT, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-		ginaStatusView::Get()->barOffset = (barOffset + 5) % dlgWidth;
 		break;
 	}
 	case WM_COMMAND:
 	{
-		break;
-	}
-	case WM_ERASEBKGND:
-	{
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = GINA_SMALL_BRD_HEIGHT;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = GINA_SMALL_BRD_HEIGHT + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
 		break;
 	}
 	case WM_DESTROY:

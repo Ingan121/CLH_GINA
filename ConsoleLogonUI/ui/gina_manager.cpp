@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include "gina_manager.h"
+#include "wallhost.h"
 #include <thread>
 #include "util/util.h"
 #include "util/interop.h"
@@ -16,10 +17,10 @@ ginaManager::ginaManager()
 {
 	hInstance = NULL;
 	hGinaDll = NULL;
-	hBar = NULL;
 	ginaVersion = 0;
 	initedPreLogon = FALSE;
 	config = {
+		FALSE,
 		FALSE,
 		FALSE
 	};
@@ -31,7 +32,7 @@ void ginaManager::LoadGina()
 	if (!hGinaDll)
 	{
 		std::thread([] {
-			MessageBoxW(0, L"Failed to load msgina.dll! Please put a copy of msgina.dll from a Windows 2000/XP installation in system32.", L"CLH_GINA", MB_OK | MB_ICONERROR);
+			MessageBoxW(0, L"Failed to load msgina.dll! Please put a copy of msgina.dll from a Windows NT 4.0 installation in system32.", L"CLH_GINA", MB_OK | MB_ICONERROR);
 		}).detach();
 		return;
 	}
@@ -77,17 +78,16 @@ void ginaManager::LoadGina()
 				}
 			}
 		}
-		if (!ginaVersion || ginaVersion < GINA_VER_2K)
+		if (!ginaVersion || ginaVersion != GINA_VER_NT4)
 		{
 			std::thread([] {
-				MessageBoxW(0, L"This version of msgina.dll is not supported yet! Please use a msgina.dll from Windows 2000 or XP.", L"CLH_GINA", MB_OK | MB_ICONERROR);
+				MessageBoxW(0, L"This version of msgina.dll is not supported in this build of CLH_GINA! Please use a msgina.dll from Windows NT 4.0.", L"CLH_GINA", MB_OK | MB_ICONERROR);
 			}).detach();
 			FreeLibrary(hGinaDll);
 			hGinaDll = NULL;
 			return;
 		}
 	}
-	hBar = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BAR));
 	initedPreLogon = IsSystemUser();
 
 #ifdef SHOWCONSOLE
@@ -106,13 +106,23 @@ void ginaManager::LoadGina()
 		config.classicTheme = classicTheme;
 	}
 
+	int hideStatusView = GetConfigInt(L"HideStatusView", -1);
+	if (hideStatusView == -1)
+	{
+		config.hideStatusView = ginaVersion == GINA_VER_NT4;
+	}
+	else
+	{
+		config.hideStatusView = hideStatusView;
+	}
+
 	// Last resort to show console if something goes wrong
 	std::thread([] {
 		int cnt = 0;
 		while (true)
 		{
 			HWND hDlg = FindWindow(L"#32770", NULL);
-			if (hDlg && IsWindowVisible(hDlg))
+			if (hDlg)
 			{
 				cnt = 0;
 			}
@@ -138,64 +148,6 @@ void ginaManager::UnloadGina()
 	}
 }
 
-void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
-{
-    RECT rect, clientRect;
-    GetWindowRect(hDlg, &rect);
-	GetClientRect(hDlg, &clientRect);
-    int dlgWidth = rect.right - rect.left;
-    int dlgHeight = rect.bottom - rect.top;
-	int dlgClientWidth = clientRect.right - clientRect.left;
-    HBITMAP hBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(isLarge ? GINA_BMP_BRD : GINA_BMP_BRD_SMALL));
-    BITMAP bmp;
-    GetObjectW(hBranding, sizeof(BITMAP), &bmp);
-    int brdWidth = bmp.bmWidth;
-	int brdHeight = bmp.bmHeight;
-	int brdX = 0;
-	if (dlgClientWidth < brdWidth)
-	{
-		dlgWidth = dlgWidth - dlgClientWidth + brdWidth;
-	}
-	else if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-	{
-		brdX = (dlgWidth - brdWidth) / 2;
-	}
-    int topAreaHeight = brdHeight + GINA_BAR_HEIGHT;
-
-    // Move all existing controls down
-    HWND hChild = GetWindow(hDlg, GW_CHILD);
-    while (hChild != NULL)
-    {
-        RECT childRect;
-        GetWindowRect(hChild, &childRect);
-        MapWindowPoints(HWND_DESKTOP, hDlg, (LPPOINT)&childRect, 2);
-        SetWindowPos(hChild, NULL, childRect.left, childRect.top + topAreaHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-        hChild = GetWindow(hChild, GW_HWNDNEXT);
-    }
-
-    // Create branding and bar controls
-    HWND hBrandingWnd = CreateWindowExW(0, L"STATIC", L"Branding", WS_CHILD | WS_VISIBLE | SS_BITMAP, brdX, 0, brdWidth, isLarge ? GINA_LARGE_BRD_HEIGHT : GINA_SMALL_BRD_HEIGHT, hDlg, NULL, hInstance, NULL);
-    SendMessageW(hBrandingWnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBranding);
-    HWND hBarWnd = CreateWindowExW(0, L"STATIC", L"Bar", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, isLarge ? GINA_LARGE_BRD_HEIGHT : GINA_SMALL_BRD_HEIGHT, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
-    SendMessageW(hBarWnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBar);
-	    
-    // Resize the bar to stretch to dlgWidth
-    SetWindowPos(hBarWnd, NULL, 0, brdHeight, dlgWidth, GINA_BAR_HEIGHT, SWP_NOZORDER);
-
-	if (createTwoBars)
-	{
-		// Create a second bar control, initially hidden in the left side of the first bar
-		HWND hBarWnd2 = CreateWindowExW(0, L"STATIC", L"Bar2", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, isLarge ? GINA_LARGE_BRD_HEIGHT : GINA_SMALL_BRD_HEIGHT, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
-		SendMessageW(hBarWnd2, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBar);
-
-		// Resize the second bar to stretch to dlgWidth
-		SetWindowPos(hBarWnd2, NULL, -dlgWidth, brdHeight, dlgWidth, GINA_BAR_HEIGHT, SWP_NOZORDER);
-	}
-
-    // Resize the dialog
-    SetWindowPos(hDlg, NULL, 0, 0, dlgWidth, dlgHeight + topAreaHeight, SWP_NOZORDER | SWP_NOMOVE);
-}
-
 void ginaManager::CloseAllDialogs()
 {
 	ginaSelectedCredentialView::Get()->Destroy();
@@ -203,4 +155,44 @@ void ginaManager::CloseAllDialogs()
 	ginaSecurityControl::Get()->Destroy();
 	ginaStatusView::Get()->Destroy();
 	ginaUserSelect::Get()->Destroy();
+}
+
+void ginaManager::PostThemeChange()
+{
+	PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaSelectedCredentialView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaChangePwdView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaSecurityControl::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaStatusView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	PostMessage(ginaUserSelect::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+}
+
+int CALLBACK HelpDlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_INITDIALOG:
+	{
+		CenterWindow(hWnd);
+		if (ginaManager::Get()->config.classicTheme)
+		{
+			MakeWindowClassic(hWnd);
+		}
+		break;
+	}
+	case WM_COMMAND:
+	{
+		if (LOWORD(wParam) == IDC_OK)
+		{
+			EndDialog(hWnd, 0);
+		}
+		break;
+	}
+	case WM_CLOSE:
+	{
+		EndDialog(hWnd, 0);
+		break;
+	}
+	}
+	return 0;
 }

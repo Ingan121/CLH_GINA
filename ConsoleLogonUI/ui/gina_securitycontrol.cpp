@@ -98,61 +98,11 @@ void ginaSecurityControl::BeginMessageLoop()
 	MSG msg;
 	while (GetMessageW(&msg, NULL, 0, 0))
 	{
-		if (msg.message == WM_KEYDOWN)
+		if (!IsDialogMessageW(dlg->hDlg, &msg))
 		{
-			switch (msg.wParam)
-			{
-			case VK_RETURN:
-			case VK_SPACE:
-			{
-				TabSpace(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]));
-				break;
-			}
-			case VK_ESCAPE:
-			{
-				KEY_EVENT_RECORD rec;
-				rec.wVirtualKeyCode = VK_ESCAPE;
-				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
-				break;
-			}
-			case VK_TAB:
-			{
-				if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
-				{
-					TabPrev(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0]);
-				}
-				else
-				{
-					TabNext(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0]);
-				}
-				break;
-			}
-			case VK_LEFT:
-			case VK_UP:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabPrev(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0], TRUE);
-				}
-				break;
-			}
-			case VK_RIGHT:
-			case VK_DOWN:
-			{
-				wchar_t className[256];
-				GetClassNameW(GetFocus(), className, 256);
-				if (wcscmp(className, L"Button") == 0)
-				{
-					TabNext(dlg->hDlg, securityTabIndex, sizeof(securityTabIndex) / sizeof(securityTabIndex[0]), securityTabIndex[0], TRUE);
-				}
-				break;
-			}
-			}
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
 		}
-		TranslateMessage(&msg);
-		DispatchMessageW(&msg);
 	}
 }
 
@@ -163,7 +113,6 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 	case WM_INITDIALOG:
 	{
 		ginaManager::Get()->CloseAllDialogs();
-		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 
 		WCHAR _wszUserName[MAX_PATH], _wszDomainName[MAX_PATH];
 		WCHAR szFormat[256], szText[1024];
@@ -200,6 +149,12 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 				wchar_t title[256], desc[256];
 				LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_EMERGENCY_RESTART_TITLE, title, 256);
 				LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_EMERGENCY_RESTART_DESC, desc, 256);
+
+				if (ginaManager::Get()->config.classicTheme)
+				{
+					MakeWindowClassicAsync(title);
+				}
+
 				if (MessageBoxW(hWnd, desc, title, MB_YESNO | MB_ICONERROR) == IDYES)
 				{
 					EmergencyRestart();
@@ -238,31 +193,6 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 				}
 			}
 		}
-		break;
-	}
-	case WM_ERASEBKGND:
-	{
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = GINA_SMALL_BRD_HEIGHT;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = GINA_SMALL_BRD_HEIGHT + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
 		break;
 	}
 	case WM_CLOSE:

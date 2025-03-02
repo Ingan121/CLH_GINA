@@ -38,25 +38,17 @@ void external::MessageView_SetActive()
 
 		if (ginaManager::Get()->config.classicTheme)
 		{
-			std::thread([=] {
-				HWND hDlg = NULL;
-				while (!hDlg)
-				{
-					hDlg = FindWindowExW(0, 0, L"#32770", title);
-					Sleep(10);
-				}
-				MakeWindowClassic(hDlg);
-				}).detach();
+			MakeWindowClassicAsync(title);
 		}
 
 		if (btnCount <= 1)
 		{
-			res = MessageBoxW(0, gMessage.c_str(), title, MB_OK | MB_ICONEXCLAMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_OK | MB_ICONERROR);
 			controls[0].Press();
 		}
 		else if (btnCount == 2)
 		{
-			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNO | MB_ICONEXCLAMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNO | MB_ICONERROR);
 			if (res == IDYES) {
 				controls[0].Press();
 			}
@@ -66,7 +58,7 @@ void external::MessageView_SetActive()
 		}
 		else if (btnCount == 3)
 		{
-			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNOCANCEL | MB_ICONEXCLAMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNOCANCEL | MB_ICONERROR);
 			if (res == IDYES) {
 				controls[0].Press();
 			}
