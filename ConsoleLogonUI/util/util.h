@@ -76,7 +76,7 @@ static void CenterWindow(HWND hWnd)
 	int windowWidth = rc.right - rc.left;
 	int windowHeight = rc.bottom - rc.top;
 	int xPos = (GetSystemMetrics(SM_CXSCREEN) - windowWidth) / 2;
-	int yPos = (GetSystemMetrics(SM_CYSCREEN) - windowHeight) / 2;
+	int yPos = (GetSystemMetrics(SM_CYSCREEN) - windowHeight) / 3;
 	SetWindowPos(hWnd, 0, xPos, yPos, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 }
 

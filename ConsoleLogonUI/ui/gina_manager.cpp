@@ -22,6 +22,7 @@ ginaManager::ginaManager()
 	initedPreLogon = FALSE;
 	config = {
 		FALSE,
+		FALSE,
 		FALSE
 	};
 }
@@ -32,7 +33,7 @@ void ginaManager::LoadGina()
 	if (!hGinaDll)
 	{
 		std::thread([] {
-			MessageBoxW(0, L"Failed to load msgina.dll! Please put a copy of msgina.dll from a Windows 2000/XP installation in system32.", L"CLH_GINA", MB_OK | MB_ICONERROR);
+			MessageBoxW(0, L"Failed to load msgina.dll! Please put a copy of msgina.dll from a Windows NT 4.0/2000/XP installation in system32.", L"CLH_GINA", MB_OK | MB_ICONERROR);
 		}).detach();
 		return;
 	}
@@ -78,10 +79,10 @@ void ginaManager::LoadGina()
 				}
 			}
 		}
-		if (!ginaVersion || ginaVersion < GINA_VER_2K)
+		if (!ginaVersion || ginaVersion < GINA_VER_NT4)
 		{
 			std::thread([] {
-				MessageBoxW(0, L"This version of msgina.dll is not supported in this build of CLH_GINA! Please use a msgina.dll from Windows 2000 or XP.", L"CLH_GINA", MB_OK | MB_ICONERROR);
+				MessageBoxW(0, L"This version of msgina.dll is not supported in this build of CLH_GINA! Please use a msgina.dll from Windows NT 4.0, 2000, or XP.", L"CLH_GINA", MB_OK | MB_ICONERROR);
 			}).detach();
 			FreeLibrary(hGinaDll);
 			hGinaDll = NULL;
@@ -151,6 +152,11 @@ void ginaManager::UnloadGina()
 
 void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
 {
+	if (ginaVersion == GINA_VER_NT4)
+	{
+		return;
+	}
+
     RECT rect, clientRect;
     GetWindowRect(hDlg, &rect);
 	GetClientRect(hDlg, &clientRect);
@@ -224,4 +230,46 @@ void ginaManager::PostThemeChange()
 	PostMessage(ginaSecurityControl::Get()->hDlg, WM_THEMECHANGED, 0, 0);
 	PostMessage(ginaStatusView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
 	PostMessage(ginaUserSelect::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+}
+
+int GetRes(int nt4, int xp)
+{
+	if (xp == -1 || ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+	{
+		return nt4;
+	}
+	else
+	{
+		return xp;
+	}
+}
+
+int CALLBACK HelpDlgProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_INITDIALOG:
+	{
+		CenterWindow(hWnd);
+		if (ginaManager::Get()->config.classicTheme)
+		{
+			MakeWindowClassic(hWnd);
+		}
+		break;
+	}
+	case WM_COMMAND:
+	{
+		if (LOWORD(wParam) == IDC_OK)
+		{
+			EndDialog(hWnd, 0);
+		}
+		break;
+	}
+	case WM_CLOSE:
+	{
+		EndDialog(hWnd, 0);
+		break;
+	}
+	}
+	return 0;
 }

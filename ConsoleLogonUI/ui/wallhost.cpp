@@ -61,35 +61,20 @@ void LoadWallpaper()
 	wchar_t wallpaperPath[MAX_PATH];
 	BOOL tileWallpaper = FALSE;
 	int wallpaperStyle = 0;
-	if (!IsSystemUser()) {
-		wchar_t lpUsername[256];
-		if (GetLoggedOnUserInfo(lpUsername, 256, NULL, 0)) {
-			if (GetUserHomeDir(lpUsername, wallpaperPath, MAX_PATH)) {
-				PathAppendW(wallpaperPath, L"AppData\\Roaming\\Microsoft\\Windows\\Themes\\TranscodedWallpaper");
-			}
-		}
-	}
-	else {
-		// TranscodedWallpaper of SYSTEM user, unlikely to exist?
-		SHGetFolderPathW(NULL, CSIDL_APPDATA, NULL, SHGFP_TYPE_CURRENT, wallpaperPath);
-		PathAppendW(wallpaperPath, L"Microsoft\\Windows\\Themes\\TranscodedWallpaper");
-	}
 
 	HKEY hive;
 	GetUserRegHive(KEY_READ, &hive);
 	if (hive) {
 		HKEY hKey;
 		if (RegOpenKeyExW(hive, L"Control Panel\\Desktop", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-			if (wallpaperPath[0] == NULL || !std::filesystem::exists(wallpaperPath)) {
-				DWORD cbData = MAX_PATH;
-				RegQueryValueExW(hKey, L"Wallpaper", NULL, NULL, (LPBYTE)wallpaperPath, &cbData);
-			}
+			DWORD cbData = MAX_PATH;
+			RegQueryValueExW(hKey, L"Wallpaper", NULL, NULL, (LPBYTE)wallpaperPath, &cbData);
 
 			if (wallpaperPath[0] == NULL || !std::filesystem::exists(wallpaperPath)) {
 				return;
 			}
 
-			DWORD cbData = sizeof(wchar_t) * 2;
+			cbData = sizeof(wchar_t) * 2;
 			wchar_t tileWallpaperStr[2];
 			if (RegQueryValueExW(hKey, L"TileWallpaper", NULL, NULL, (LPBYTE)&tileWallpaperStr, &cbData) == ERROR_SUCCESS) {
 				tileWallpaper = wcscmp(tileWallpaperStr, L"1") == 0;

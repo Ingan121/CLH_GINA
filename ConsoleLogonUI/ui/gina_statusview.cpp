@@ -51,7 +51,7 @@ void ginaStatusView::Create()
 {
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-	ginaStatusView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_STATUS_VIEW), 0, (DLGPROC)DlgProc, 0);
+	ginaStatusView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GetRes(GINA_DLG_STATUS_VIEW)), 0, (DLGPROC)DlgProc, 0);
 	if (!ginaStatusView::Get()->hDlg)
 	{
 		MessageBoxW(0, L"Failed to create status view dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
@@ -68,7 +68,7 @@ void ginaStatusView::Create()
 		MakeWindowClassic(ginaStatusView::Get()->hDlg);
 	}
 	if (ginaStatusView::Get()->hDlg != NULL) {
-		SetDlgItemTextW(ginaStatusView::Get()->hDlg, IDC_STATUS_TEXT, g_statusText.c_str());
+		SetDlgItemTextW(ginaStatusView::Get()->hDlg, GetRes(IDC_STATUS_TEXT), g_statusText.c_str());
 	}
 }
 
@@ -100,7 +100,7 @@ void ginaStatusView::Hide()
 void ginaStatusView::UpdateText()
 {
 	ginaStatusView* dlg = ginaStatusView::Get();
-	SetDlgItemTextW(dlg->hDlg, IDC_STATUS_TEXT, g_statusText.c_str());
+	SetDlgItemTextW(dlg->hDlg, GetRes(IDC_STATUS_TEXT), g_statusText.c_str());
 }
 
 void ginaStatusView::BeginMessageLoop()
@@ -120,8 +120,11 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	{
 	case WM_INITDIALOG:
 	{
-		ginaManager::Get()->LoadBranding(hWnd, FALSE, TRUE);
-		SetTimer(hWnd, 20, 20, NULL);
+		if (ginaManager::Get()->ginaVersion >= GINA_VER_2K)
+		{
+			ginaManager::Get()->LoadBranding(hWnd, FALSE, TRUE);
+			SetTimer(hWnd, 20, 20, NULL);
+		}
 		break;
 	}
 	case WM_TIMER:
@@ -143,6 +146,11 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	}
 	case WM_ERASEBKGND:
 	{
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+		{
+			return 0;
+		}
+
 		HDC hdc = (HDC)wParam;
 		RECT rect;
 		GetClientRect(hWnd, &rect);

@@ -3,7 +3,7 @@
 #include "gina_manager.h"
 #include <atomic>
 
-#define IDC_STATUS_TEXT 2451
+#define IDC_STATUS_TEXT 101, 2451
 
 class ginaStatusView
 {

@@ -49,14 +49,15 @@ void external::MessageView_SetActive()
 				}).detach();
 		}
 
+		long mbIcon = ginaManager::Get()->ginaVersion == GINA_VER_NT4 ? MB_ICONERROR : MB_ICONEXCLAMATION;
 		if (btnCount <= 1)
 		{
-			res = MessageBoxW(0, gMessage.c_str(), title, MB_OK | MB_ICONEXCLAMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_OK | mbIcon);
 			controls[0].Press();
 		}
 		else if (btnCount == 2)
 		{
-			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNO | MB_ICONEXCLAMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNO | mbIcon);
 			if (res == IDYES) {
 				controls[0].Press();
 			}
@@ -66,7 +67,7 @@ void external::MessageView_SetActive()
 		}
 		else if (btnCount == 3)
 		{
-			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNOCANCEL | MB_ICONEXCLAMATION);
+			res = MessageBoxW(0, gMessage.c_str(), title, MB_YESNOCANCEL | mbIcon);
 			if (res == IDYES) {
 				controls[0].Press();
 			}

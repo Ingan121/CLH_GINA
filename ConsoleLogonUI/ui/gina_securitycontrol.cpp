@@ -58,7 +58,7 @@ void ginaSecurityControl::Create()
 {
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-	ginaSecurityControl::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_SECURITY_CONTROL), 0, (DLGPROC)DlgProc, 0);
+	ginaSecurityControl::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GetRes(GINA_DLG_SECURITY_CONTROL)), 0, (DLGPROC)DlgProc, 0);
 	if (!ginaSecurityControl::Get()->hDlg)
 	{
 		MessageBoxW(0, L"Failed to create security control dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
@@ -120,7 +120,7 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		GetLoggedOnUserInfo(_wszUserName, MAX_PATH, _wszDomainName, MAX_PATH);
 		LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_LOGON_NAME, szFormat, 256);
 		swprintf_s(szText, szFormat, _wszUserName, _wszDomainName, _wszUserName);
-		SetDlgItemTextW(hWnd, IDC_SECURITY_LOGONNAME, szText);
+		SetDlgItemTextW(hWnd, GetRes(IDC_SECURITY_LOGONNAME), szText);
 
 		SYSTEMTIME _logonTime;
 		WCHAR szDate[128], szTime[128], szDateText[256];
@@ -128,22 +128,22 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, NULL, &_logonTime, NULL, szDate, 128, NULL);
 		GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, NULL, &_logonTime, NULL, szTime, 128);
 		swprintf_s(szDateText, L"%s %s", szDate, szTime);
-		SetDlgItemTextW(hWnd, IDC_SECURITY_DATE, szDateText);
+		SetDlgItemTextW(hWnd, GetRes(IDC_SECURITY_DATE), szDateText);
 		break;
 	}
 	case WM_COMMAND:
 	{
-		if (LOWORD(wParam) == IDC_SECURITY_LOCK)
+		if (LOWORD(wParam) == GetRes(IDC_SECURITY_LOCK))
 		{
 			//system("rundll32.exe user32.dll,LockWorkStation");
 			buttonsList[1].Press();
 		}
-		else if (LOWORD(wParam) == IDC_SECURITY_LOGOFF)
+		else if (LOWORD(wParam) == GetRes(IDC_SECURITY_LOGOFF))
 		{
 			//buttonsList[2].Press(); // makes the system hang for some reason
 			ShowLogoffDialog(hWnd);
 		}
-		else if (LOWORD(wParam) == IDC_SECURITY_SHUTDOWN)
+		else if (LOWORD(wParam) == GetRes(IDC_SECURITY_SHUTDOWN))
 		{
 			if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
 			{
@@ -160,7 +160,7 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 				ShowShutdownDialog(hWnd);
 			}
 		}
-		else if (LOWORD(wParam) == IDC_SECURITY_CHANGEPWD)
+		else if (LOWORD(wParam) == GetRes(IDC_SECURITY_CHANGEPWD))
 		{
 			// Not available with MS accounts
 			// But checking with number of buttons is not accurate
@@ -169,7 +169,7 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 			// Maybe just implement the password change logic ourselves in the future?
 			buttonsList[0].Press();
 		}
-		else if (LOWORD(wParam) == IDC_SECURITY_TASKMGR)
+		else if (LOWORD(wParam) == GetRes(IDC_SECURITY_TASKMGR))
 		{
 			buttonsList[buttonsList.size() - 2].Press();
 		}
@@ -192,6 +192,11 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 	}
 	case WM_ERASEBKGND:
 	{
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+		{
+			return 0;
+		}
+
 		HDC hdc = (HDC)wParam;
 		RECT rect;
 		GetClientRect(hWnd, &rect);

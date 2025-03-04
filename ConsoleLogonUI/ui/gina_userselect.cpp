@@ -105,7 +105,7 @@ void ginaUserSelect::Create()
 	}
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-	ginaUserSelect::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT), 0, (DLGPROC)DlgProc, 0);
+	ginaUserSelect::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GetRes(GINA_DLG_USER_SELECT)), 0, (DLGPROC)DlgProc, 0);
 	if (!ginaUserSelect::Get()->hDlg)
 	{
 		MessageBoxW(0, L"Failed to create user select dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
@@ -166,56 +166,66 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		int bottomBtnYToMove = 0;
 
 		// Hide the legal announcement
-		HWND hLegalAnnouncement = GetDlgItem(hWnd, IDC_CREDVIEW_LEGAL);
-		RECT legalRect;
-		GetWindowRect(hLegalAnnouncement, &legalRect);
-		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&legalRect, 2);
-		dlgHeightToReduce = legalRect.bottom - legalRect.top;
-		ShowWindow(hLegalAnnouncement, SW_HIDE);
+		HWND hLegalAnnouncement = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LEGAL));
+		if (hLegalAnnouncement)
+		{
+			RECT legalRect;
+			GetWindowRect(hLegalAnnouncement, &legalRect);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&legalRect, 2);
+			dlgHeightToReduce = legalRect.bottom - legalRect.top;
+			ShowWindow(hLegalAnnouncement, SW_HIDE);
+
+			HWND hChild = GetWindow(hWnd, GW_CHILD);
+			while (hChild != NULL)
+			{
+				if (hChild != hLegalAnnouncement)
+				{
+					RECT childRect;
+					GetWindowRect(hChild, &childRect);
+					MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&childRect, 2);
+					if (childRect.top > 6)
+					{
+						SetWindowPos(hChild, NULL, childRect.left, childRect.top - legalRect.bottom, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+					}
+				}
+				hChild = GetWindow(hChild, GW_HWNDNEXT);
+			}
+		}
 
 		// Hide the XP-specific locked message for the pre-logon dialog
 		// (Used in XP when the Welcome screen is disabled and tsdiscon.exe is used)
-		HWND hLockedGroupBox = GetDlgItem(hWnd, IDC_CREDVIEW_XP_LOCKED_GROUP);
+		HWND hLockedGroupBox = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_XP_LOCKED_GROUP));
 		if (hLockedGroupBox)
 		{
 			ShowWindow(hLockedGroupBox, SW_HIDE);
 			RECT lockedRect;
 			GetWindowRect(hLockedGroupBox, &lockedRect);
 			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&lockedRect, 2);
-			HWND hLockedInfo = GetDlgItem(hWnd, IDC_CREDVIEW_XP_LOCKED_INFO);
-			HWND hLockedUsernameInfo = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_USERNAME_INFO);
-			HWND hLockedIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LOCKED_ICON);
+			HWND hLockedInfo = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_XP_LOCKED_INFO));
+			HWND hLockedUsernameInfo = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_USERNAME_INFO));
+			HWND hLockedIcon = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_ICON));
 			ShowWindow(hLockedInfo, SW_HIDE);
 			ShowWindow(hLockedUsernameInfo, SW_HIDE);
 			ShowWindow(hLockedIcon, SW_HIDE);
 			dlgHeightToReduce += lockedRect.bottom - lockedRect.top;
 		}
 
-		HWND hChild = GetWindow(hWnd, GW_CHILD);
-		while (hChild != NULL)
+		// Load the icon (NT4 only)
+		HWND hIcon = GetDlgItem(hWnd, IDC_CREDVIEW_ICON);
+		if (hIcon)
 		{
-			if (hChild != hLegalAnnouncement)
-			{
-				RECT childRect;
-				GetWindowRect(hChild, &childRect);
-				MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&childRect, 2);
-				if (childRect.top > 6)
-				{
-					SetWindowPos(hChild, NULL, childRect.left, childRect.top - legalRect.bottom, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-				}
-			}
-			hChild = GetWindow(hChild, GW_HWNDNEXT);
+			SendMessageW(hIcon, STM_SETICON, (WPARAM)LoadImageW(ginaManager::Get()->hGinaDll, MAKEINTRESOURCEW(IDI_LOGON), IMAGE_ICON, 64, 64, LR_DEFAULTCOLOR), 0);
 		}
 
 		// Replace the username input with a combo box
-		HWND hUsername = GetDlgItem(hWnd, IDC_CREDVIEW_USERNAME);
+		HWND hUsername = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_USERNAME));
 		RECT usernameRect;
 		GetWindowRect(hUsername, &usernameRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&usernameRect, 2);
 		ShowWindow(hUsername, SW_HIDE);
 
 		// Add users to the combo box
-		g_hUsernameCombo = CreateWindowExW(0, L"COMBOBOX", L"UserSelect", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP, usernameRect.left, usernameRect.top, usernameRect.right - usernameRect.left, usernameRect.bottom - usernameRect.top, hWnd, (HMENU)IDC_CREDVIEW_USERNAME, NULL, NULL);
+		g_hUsernameCombo = CreateWindowExW(0, L"COMBOBOX", L"UserSelect", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP, usernameRect.left, usernameRect.top, usernameRect.right - usernameRect.left, usernameRect.bottom - usernameRect.top, hWnd, (HMENU)GetRes(IDC_CREDVIEW_USERNAME), NULL, NULL);
 		for (int i = buttons.size() - 1; i >= 0; i--)
 		{
 			SendMessageW(g_hUsernameCombo, CB_ADDSTRING, 0, (LPARAM)buttons[i].GetText().c_str());
@@ -224,8 +234,8 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		SendMessageW(g_hUsernameCombo, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), MAKELPARAM(TRUE, 0));
 
 		// Hide the password input & label
-		HWND hPassword = GetDlgItem(hWnd, IDC_CREDVIEW_PASSWORD);
-		HWND hPasswordLabel = GetDlgItem(hWnd, IDC_CREDVIEW_PASSWORD_LABEL);
+		HWND hPassword = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_PASSWORD));
+		HWND hPasswordLabel = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_PASSWORD_LABEL));
 		RECT passwordRect;
 		GetWindowRect(hPassword, &passwordRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&passwordRect, 2);
@@ -235,8 +245,8 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		bottomBtnYToMove = passwordRect.bottom - passwordRect.top + 8;
 
 		// Hide the domain chooser
-		HWND hDomainChooser = GetDlgItem(hWnd, IDC_CREDVIEW_DOMAIN);
-		HWND hDomainChooserLabel = GetDlgItem(hWnd, IDC_CREDVIEW_DOMAIN_LABEL);
+		HWND hDomainChooser = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_DOMAIN));
+		HWND hDomainChooserLabel = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_DOMAIN_LABEL));
 		RECT domainRect;
 		GetWindowRect(hDomainChooser, &domainRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&domainRect, 2);
@@ -246,7 +256,7 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		bottomBtnYToMove += domainRect.bottom - domainRect.top + 8;
 
 		// Hide the dial-up checkbox
-		HWND hDialup = GetDlgItem(hWnd, IDC_CREDVIEW_DIALUP);
+		HWND hDialup = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_DIALUP));
 		RECT dialupRect;
 		GetWindowRect(hDialup, &dialupRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&dialupRect, 2);
@@ -254,35 +264,48 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		dlgHeightToReduce += dialupRect.bottom - dialupRect.top + 8;
 		bottomBtnYToMove += dialupRect.bottom - dialupRect.top;
 
-		// Move the OK, Cancel, Shutdown, Options, and language icon controls up
+		// Move the OK, Cancel, Shutdown, Options, and language icon controls up (2000+)
 		HWND hOK = GetDlgItem(hWnd, IDC_OK);
 		HWND hCancel = GetDlgItem(hWnd, IDC_CANCEL);
-		HWND hShutdown = GetDlgItem(hWnd, IDC_CREDVIEW_SHUTDOWN);
-		HWND hOptions = GetDlgItem(hWnd, IDC_CREDVIEW_OPTIONS);
-		HWND hLanguageIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LANGUAGE);
-		HWND controlsToMove[] = { hOK, hCancel, hShutdown, hOptions, hLanguageIcon };
-		for (int i = 0; i < sizeof(controlsToMove) / sizeof(HWND); i++)
+		if (ginaManager::Get()->ginaVersion >= GINA_VER_2K)
 		{
-			RECT controlRect;
-			GetWindowRect(controlsToMove[i], &controlRect);
-			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&controlRect, 2);
-			SetWindowPos(controlsToMove[i], NULL, controlRect.left, controlRect.top - bottomBtnYToMove, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+			HWND hShutdown = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_SHUTDOWN));
+			HWND hOptions = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_OPTIONS));
+			HWND hLanguageIcon = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LANGUAGE));
+			HWND controlsToMove[] = { hOK, hCancel, hShutdown, hOptions, hLanguageIcon };
+			for (int i = 0; i < sizeof(controlsToMove) / sizeof(HWND); i++)
+			{
+				RECT controlRect;
+				GetWindowRect(controlsToMove[i], &controlRect);
+				MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&controlRect, 2);
+				SetWindowPos(controlsToMove[i], NULL, controlRect.left, controlRect.top - bottomBtnYToMove, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+			}
+		}
+		else
+		{
+			// NT4 has fixed dialog sizes regardless of the control visibility
+			dlgHeightToReduce = 0;
 		}
 
 		// DIsable the Cancel button
 		EnableWindow(hCancel, FALSE);
 
-		ginaManager* manager = ginaManager::Get();
-		HMODULE hGinaDll = manager->hGinaDll;
-		wchar_t optBtnStr[256];
-		LoadStringW(hGinaDll, GINA_STR_OPTBTN_COLLAPSE, optBtnStr, 256);
-		SetDlgItemTextW(hWnd, IDC_CREDVIEW_OPTIONS, optBtnStr);
+		HWND optBtn = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_OPTIONS));
+		if (optBtn)
+		{
+			wchar_t optBtnStr[256];
+			LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_OPTBTN_COLLAPSE, optBtnStr, 256);
+			SetDlgItemTextW(hWnd, GetRes(IDC_CREDVIEW_OPTIONS), optBtnStr);
+		}
 
+		// Resize the dialog (2000+)
 		SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
 
-		// Load branding and bar images
-		manager->LoadBranding(hWnd, TRUE);
-		SetFocus(GetDlgItem(hWnd, IDC_CREDVIEW_PASSWORD));
+		// Load branding and bar images (2000+)
+		ginaManager::Get()->LoadBranding(hWnd, TRUE);
+
+		// Set focus to the username combo box
+		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
 		break;
 	}
@@ -299,12 +322,16 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		{
 			// Cancel button, disabled
 		}
-		else if (LOWORD(wParam) == IDC_CREDVIEW_SHUTDOWN)
+		else if (LOWORD(wParam) == IDC_CREDVIEW_HELP)
+		{
+			DialogBoxW(ginaManager::Get()->hGinaDll, MAKEINTRESOURCEW(GINA_DLG_USER_SELECT_HLP), hWnd, (DLGPROC)HelpDlgProc);
+		}
+		else if (LOWORD(wParam) == GetRes(IDC_CREDVIEW_SHUTDOWN))
 		{
 			// Shutdown button
 			ShowShutdownDialog(hWnd);
 		}
-		else if (LOWORD(wParam) == IDC_CREDVIEW_OPTIONS)
+		else if (LOWORD(wParam) == GetRes(IDC_CREDVIEW_OPTIONS))
 		{
 			// Options button
 			HWND hShutdown = GetDlgItem(hWnd, 1501);

@@ -74,7 +74,7 @@ void ginaShutdownView::Create(HWND parent)
 {
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-	ginaShutdownView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_SHUTDOWN), parent, (DLGPROC)DlgProc, 0);
+	ginaShutdownView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GetRes(GINA_DLG_SHUTDOWN)), parent, (DLGPROC)DlgProc, 0);
 	if (!ginaShutdownView::Get()->hDlg)
 	{
 		MessageBoxW(0, L"Failed to create shutdown dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
@@ -129,61 +129,85 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 	{
 		HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
 
-		HWND hShutdownIcon = GetDlgItem(hWnd, IDC_SHUTDOWN_ICON);
-		SendMessageW(hShutdownIcon, STM_SETICON, (WPARAM)LoadIconW(hGinaDll, MAKEINTRESOURCEW(IDI_SHUTDOWN)), 0);
-
-		// Populate shutdown combo
-		HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
-		wchar_t shutdownStr[256];
-		if (!IsSystemUser())
+		// Load the icon (shutdown icon in msgina.dll for 2000+, generic MB_ICONINFORMATION icon for NT4)
+		HWND hShutdownIcon = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_ICON));
+		HICON hIcon = NULL;
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
 		{
-			wchar_t logoffStr[256], username[MAX_PATH], domain[MAX_PATH];
-			GetLoggedOnUserInfo(username, MAX_PATH, domain, MAX_PATH);
-			LoadStringW(hGinaDll, GINA_STR_LOGOFF, logoffStr, 256);
-			swprintf_s(shutdownStr, logoffStr, username);
-			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
+			HINSTANCE hShell32 = LoadLibraryW(L"shell32.dll");
+			if (hShell32)
+			{
+				hIcon = (HICON)LoadImageW(hShell32, MAKEINTRESOURCEW(SHELL32_INFO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_VGACOLOR);
+				FreeLibrary(hShell32);
+			}
 		}
-		LoadStringW(hGinaDll, GINA_STR_SHUTDOWN, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		LoadStringW(hGinaDll, GINA_STR_RESTART, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		LoadStringW(hGinaDll, GINA_STR_SLEEP, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		LoadStringW(hGinaDll, GINA_STR_HIBERNATE, shutdownStr, 256);
-		SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-		SendMessageW(hShutdownCombo, CB_SETCURSEL, 2, 0);
+		else
+		{
+			hIcon = LoadIconW(hGinaDll, MAKEINTRESOURCEW(IDI_SHUTDOWN));
+		}
+		if (hIcon)
+		{
+			SendMessageW(hShutdownIcon, STM_SETICON, (WPARAM)hIcon, 0);
+		}
 
-		wchar_t shutdownDesc[256];
-		LoadStringW(hGinaDll, GINA_STR_RESTART_DESC, shutdownDesc, 256);
-		SetDlgItemTextW(hWnd, IDC_SHUTDOWN_DESC, shutdownDesc);
+		// Populate shutdown combo (2000+)
+		HWND hShutdownCombo = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_COMBO));
+		if (hShutdownCombo)
+		{
+			wchar_t shutdownStr[256];
+			if (!IsSystemUser())
+			{
+				wchar_t logoffStr[256], username[MAX_PATH], domain[MAX_PATH];
+				GetLoggedOnUserInfo(username, MAX_PATH, domain, MAX_PATH);
+				LoadStringW(hGinaDll, GINA_STR_LOGOFF, logoffStr, 256);
+				swprintf_s(shutdownStr, logoffStr, username);
+				SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
+			}
+			LoadStringW(hGinaDll, GINA_STR_SHUTDOWN, shutdownStr, 256);
+			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
+			LoadStringW(hGinaDll, GINA_STR_RESTART, shutdownStr, 256);
+			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
+			LoadStringW(hGinaDll, GINA_STR_SLEEP, shutdownStr, 256);
+			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
+			LoadStringW(hGinaDll, GINA_STR_HIBERNATE, shutdownStr, 256);
+			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
+			SendMessageW(hShutdownCombo, CB_SETCURSEL, 2, 0);
 
-		// Hide help button and move the OK and Cancel buttons
-		HWND hHelpBtn = GetDlgItem(hWnd, IDC_SHUTDOWN_HELP);
-		ShowWindow(hHelpBtn, SW_HIDE);
-		HWND hOkBtn = GetDlgItem(hWnd, IDC_OK);
-		HWND hCancelBtn = GetDlgItem(hWnd, IDC_CANCEL);
-		RECT helpRect, okRect, cancelRect;
-		GetWindowRect(hHelpBtn, &helpRect);
-		GetWindowRect(hOkBtn, &okRect);
-		GetWindowRect(hCancelBtn, &cancelRect);
-		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&helpRect, 2);
-		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&okRect, 2);
-		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&cancelRect, 2);
-		SetWindowPos(hOkBtn, NULL, okRect.left + helpRect.right - helpRect.left + 8, okRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-		SetWindowPos(hCancelBtn, NULL, cancelRect.left + helpRect.right - helpRect.left + 8, cancelRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+			wchar_t shutdownDesc[256];
+			LoadStringW(hGinaDll, GINA_STR_RESTART_DESC, shutdownDesc, 256);
+			SetDlgItemTextW(hWnd, GetRes(IDC_SHUTDOWN_DESC), shutdownDesc);
+		}
+
+		// Hide help button and move the OK and Cancel buttons (2000+)
+		HWND hHelpBtn = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_HELP));
+		if (hHelpBtn)
+		{
+			ShowWindow(hHelpBtn, SW_HIDE);
+			HWND hOkBtn = GetDlgItem(hWnd, IDC_OK);
+			HWND hCancelBtn = GetDlgItem(hWnd, IDC_CANCEL);
+			RECT helpRect, okRect, cancelRect;
+			GetWindowRect(hHelpBtn, &helpRect);
+			GetWindowRect(hOkBtn, &okRect);
+			GetWindowRect(hCancelBtn, &cancelRect);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&helpRect, 2);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&okRect, 2);
+			MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&cancelRect, 2);
+			SetWindowPos(hOkBtn, NULL, okRect.left + helpRect.right - helpRect.left + 8, okRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+			SetWindowPos(hCancelBtn, NULL, cancelRect.left + helpRect.right - helpRect.left + 8, cancelRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+		}
 
 		// Hide the shutdown tracker (XP only)
-		HWND hShutdownTracker = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_GROUP);
+		HWND hShutdownTracker = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_GROUP));
 		if (hShutdownTracker)
 		{
 			ShowWindow(hShutdownTracker, SW_HIDE);
-			HWND hShutdownTrackerDesc = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC);
-			HWND hShutdownTrackerBooted = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_BOOTED);
-			HWND hShutdownTrackerOptionsLabel = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_LABEL);
-			HWND hShutdownTrackerOptionsCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_COMBO);
-			HWND hShutdownTrackerOptionsDesc = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_OPTIONS_DESC);
-			HWND hShutdownTrackerDescLabel = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC_LABEL);
-			HWND hShutdownTrackerDescEdit = GetDlgItem(hWnd, IDC_SHUTDOWN_TRACKER_DESC_EDIT);
+			HWND hShutdownTrackerDesc = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_DESC));
+			HWND hShutdownTrackerBooted = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_BOOTED));
+			HWND hShutdownTrackerOptionsLabel = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_OPTIONS_LABEL));
+			HWND hShutdownTrackerOptionsCombo = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_OPTIONS_COMBO));
+			HWND hShutdownTrackerOptionsDesc = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_OPTIONS_DESC));
+			HWND hShutdownTrackerDescLabel = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_DESC_LABEL));
+			HWND hShutdownTrackerDescEdit = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_TRACKER_DESC_EDIT));
 			ShowWindow(hShutdownTrackerDesc, SW_HIDE);
 			ShowWindow(hShutdownTrackerBooted, SW_HIDE);
 			ShowWindow(hShutdownTrackerOptionsLabel, SW_HIDE);
@@ -215,13 +239,33 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 			SetWindowPos(hWnd, NULL, dlgRectNew.left, dlgRectNew.top, dlgRectNew.right - dlgRectNew.left, dlgHeight - trackerHeight, SWP_NOZORDER);
 		}
 
+		// Hide power off option (no one uses non-ACPI systems anymore) (NT4 only)
+		// And hide duplicate OK and Cancel buttons
+		HWND hPowerOff = GetDlgItem(hWnd, IDC_SHUTDOWN_POWEROFF);
+		if (hPowerOff)
+		{
+			HWND hOK = GetDlgItem(hWnd, IDC_SHUTDOWN_OK);
+			HWND hCancel = GetDlgItem(hWnd, IDC_SHUTDOWN_CANCEL);
+			ShowWindow(hPowerOff, SW_HIDE);
+			ShowWindow(hOK, SW_HIDE);
+			ShowWindow(hCancel, SW_HIDE);
+		}
+
+		// Check the shutdown checkbox
+		HWND hShutdown = GetDlgItem(hWnd, IDC_SHUTDOWN_SHUTDOWN);
+		if (hShutdown)
+		{
+			SendMessageW(hShutdown, BM_SETCHECK, BST_CHECKED, 0);
+		}
+
+		// Load branding and bar images (2000+)
 		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 	}
 	case WM_COMMAND:
 	{
 		if (HIWORD(wParam) == CBN_SELCHANGE)
 		{
-			HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
+			HWND hShutdownCombo = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_COMBO));
 			int index = SendMessageW(hShutdownCombo, CB_GETCURSEL, 0, 0);
 			if (IsSystemUser())
 			{
@@ -248,36 +292,53 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 			}
 			wchar_t shutdownDesc[256];
 			LoadStringW(ginaManager::Get()->hGinaDll, descId, shutdownDesc, 256);
-			SetDlgItemTextW(hWnd, IDC_SHUTDOWN_DESC, shutdownDesc);
+			SetDlgItemTextW(hWnd, GetRes(IDC_SHUTDOWN_DESC), shutdownDesc);
 		}
 		else if (LOWORD(wParam) == IDC_OK)
 		{
-			HWND hShutdownCombo = GetDlgItem(hWnd, IDC_SHUTDOWN_COMBO);
-			int index = SendMessageW(hShutdownCombo, CB_GETCURSEL, 0, 0);
-			if (IsSystemUser())
+			HWND hShutdownCombo = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_COMBO));
+			if (hShutdownCombo) // 2000+ (combobox)
 			{
-				index += 1;
-			}
+				int index = SendMessageW(hShutdownCombo, CB_GETCURSEL, 0, 0);
+				if (IsSystemUser())
+				{
+					index += 1;
+				}
 
-			switch (index)
+				switch (index)
+				{
+				case 0:
+					ExitWindowsEx(EWX_LOGOFF, 0);
+					break;
+				case 1:
+					EnableShutdownPrivilege();
+					ExitWindowsEx(EWX_SHUTDOWN, 0);
+					break;
+				case 2:
+					EnableShutdownPrivilege();
+					ExitWindowsEx(EWX_REBOOT, 0);
+					break;
+				case 3:
+					SetSuspendState(FALSE, FALSE, FALSE);
+					break;
+				case 4:
+					SetSuspendState(TRUE, FALSE, FALSE);
+					break;
+				}
+			}
+			else // NT4 (checkboxes)
 			{
-			case 0:
-				ExitWindowsEx(EWX_LOGOFF, 0);
-				break;
-			case 1:
+				int action = 0;
+				if (IsDlgButtonChecked(hWnd, IDC_SHUTDOWN_SHUTDOWN) == BST_CHECKED)
+				{
+					action = EWX_SHUTDOWN;
+				}
+				else if (IsDlgButtonChecked(hWnd, IDC_SHUTDOWN_RESTART) == BST_CHECKED)
+				{
+					action = EWX_REBOOT;
+				}
 				EnableShutdownPrivilege();
-				ExitWindowsEx(EWX_SHUTDOWN, 0);
-				break;
-			case 2:
-				EnableShutdownPrivilege();
-				ExitWindowsEx(EWX_REBOOT, 0);
-				break;
-			case 3:
-				SetSuspendState(FALSE, FALSE, FALSE);
-				break;
-			case 4:
-				SetSuspendState(TRUE, FALSE, FALSE);
-				break;
+				ExitWindowsEx(action, 0);
 			}
 
 			ginaShutdownView::Destroy();
@@ -290,6 +351,11 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 	}
 	case WM_ERASEBKGND:
 	{
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+		{
+			return 0;
+		}
+
 		HDC hdc = (HDC)wParam;
 		RECT rect;
 		GetClientRect(hWnd, &rect);
@@ -337,7 +403,7 @@ void ginaLogoffView::Create(HWND parent)
 {
 	HINSTANCE hInstance = ginaManager::Get()->hInstance;
 	HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-	ginaLogoffView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GINA_DLG_LOGOFF), parent, (DLGPROC)DlgProc, 0);
+	ginaLogoffView::Get()->hDlg = CreateDialogParamW(hGinaDll, MAKEINTRESOURCEW(GetRes(GINA_DLG_LOGOFF)), parent, (DLGPROC)DlgProc, 0);
 	if (!ginaLogoffView::Get()->hDlg)
 	{
 		MessageBoxW(0, L"Failed to create logoff dialog! Please make sure your copy of msgina.dll in system32 is valid!", L"Error", MB_OK | MB_ICONERROR);
@@ -391,8 +457,27 @@ int CALLBACK ginaLogoffView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	case WM_INITDIALOG:
 	{
 		HINSTANCE hGinaDll = ginaManager::Get()->hGinaDll;
-		HWND hLogoffIcon = GetDlgItem(hWnd, IDC_LOGOFF_ICON);
-		SendMessageW(hLogoffIcon, STM_SETICON, (WPARAM)LoadIconW(hGinaDll, MAKEINTRESOURCEW(IDI_LOGOFF)), 0);
+
+		// Load the icon (logoff icon in msgina.dll for 2000+, generic MB_ICONINFORMATION icon for NT4)
+		HWND hLogoffIcon = GetDlgItem(hWnd, GetRes(IDC_LOGOFF_ICON));
+		HICON hIcon = NULL;
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+		{
+			HINSTANCE hShell32 = LoadLibraryW(L"shell32.dll");
+			if (hShell32)
+			{
+				hIcon = (HICON)LoadImageW(hShell32, MAKEINTRESOURCEW(SHELL32_INFO), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_VGACOLOR);
+				FreeLibrary(hShell32);
+			}
+		}
+		else
+		{
+			hIcon = LoadIconW(hGinaDll, MAKEINTRESOURCEW(IDI_LOGOFF));
+		}
+		if (hIcon)
+		{
+			SendMessageW(hLogoffIcon, STM_SETICON, (WPARAM)hIcon, 0);
+		}
 	}
 	case WM_COMMAND:
 	{

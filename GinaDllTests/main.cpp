@@ -100,7 +100,7 @@ int CALLBACK DlgProcUserSelect(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		int bottomBtnYToMove = 0;
 
 		// Hide the legal announcement
-		HWND hLegalAnnouncement = GetDlgItem(hWnd, IDC_CREDVIEW_LEGAL);
+		HWND hLegalAnnouncement = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LEGAL));
 		RECT legalRect;
 		GetWindowRect(hLegalAnnouncement, &legalRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&legalRect, 2);
@@ -124,8 +124,8 @@ int CALLBACK DlgProcUserSelect(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		}
 
 		// Hide the domain chooser
-		HWND hDomainChooser = GetDlgItem(hWnd, IDC_CREDVIEW_DOMAIN);
-		HWND hDomainChooserLabel = GetDlgItem(hWnd, IDC_CREDVIEW_DOMAIN_LABEL);
+		HWND hDomainChooser = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_DOMAIN));
+		HWND hDomainChooserLabel = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_DOMAIN_LABEL));
 		RECT domainRect;
 		GetWindowRect(hDomainChooser, &domainRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&domainRect, 2);
@@ -135,7 +135,7 @@ int CALLBACK DlgProcUserSelect(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		bottomBtnYToMove = domainRect.bottom - domainRect.top + 8;
 
 		// Hide the dial-up checkbox
-		HWND hDialup = GetDlgItem(hWnd, IDC_CREDVIEW_DIALUP);
+		HWND hDialup = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_DIALUP));
 		RECT dialupRect;
 		GetWindowRect(hDialup, &dialupRect);
 		MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&dialupRect, 2);
@@ -146,9 +146,9 @@ int CALLBACK DlgProcUserSelect(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		// Move the OK, Cancel, Shutdown, Options, and language icon controls up
 		HWND hOK = GetDlgItem(hWnd, IDC_OK);
 		HWND hCancel = GetDlgItem(hWnd, IDC_CANCEL);
-		HWND hShutdown = GetDlgItem(hWnd, IDC_CREDVIEW_SHUTDOWN);
-		HWND hOptions = GetDlgItem(hWnd, IDC_CREDVIEW_OPTIONS);
-		HWND hLanguageIcon = GetDlgItem(hWnd, IDC_CREDVIEW_LANGUAGE);
+		HWND hShutdown = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_SHUTDOWN));
+		HWND hOptions = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_OPTIONS));
+		HWND hLanguageIcon = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LANGUAGE));
 		HWND controlsToMove[] = { hOK, hCancel, hShutdown, hOptions, hLanguageIcon };
 		for (int i = 0; i < sizeof(controlsToMove) / sizeof(HWND); i++)
 		{
@@ -163,7 +163,7 @@ int CALLBACK DlgProcUserSelect(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 
 		wchar_t optBtnStr[256];
 		LoadStringW(g_hGinaDll, GINA_STR_OPTBTN_COLLAPSE, optBtnStr, 256);
-		SetDlgItemTextW(hWnd, IDC_CREDVIEW_OPTIONS, optBtnStr);
+		SetDlgItemTextW(hWnd, GetRes(IDC_CREDVIEW_OPTIONS), optBtnStr);
 
 		SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
 
