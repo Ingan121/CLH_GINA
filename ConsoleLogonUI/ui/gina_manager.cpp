@@ -62,7 +62,7 @@ void ginaManager::LoadGina()
 							{
 								ginaVersion = GINA_VER_2K;
 							}
-							else if (major == 5 && minor == 1)
+							else if (major == 5 && (minor == 1 || minor == 2))
 							{
 								ginaVersion = GINA_VER_XP;
 							}
