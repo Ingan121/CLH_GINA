@@ -127,11 +127,8 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	{
 	case WM_INITDIALOG:
 	{
-		if (ginaManager::Get()->ginaVersion >= GINA_VER_2K)
-		{
-			ginaManager::Get()->LoadBranding(hWnd, FALSE, TRUE);
-			SetTimer(hWnd, 20, 20, NULL);
-		}
+		ginaManager::Get()->LoadBranding(hWnd, FALSE, TRUE);
+		SetTimer(hWnd, 20, 20, NULL);
 		break;
 	}
 	case WM_TIMER:
@@ -155,6 +152,11 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 			PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
 			
 			g_appliedUserChangeOnce = TRUE;
+		}
+
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+		{
+			break;
 		}
 
 		RECT rect;
