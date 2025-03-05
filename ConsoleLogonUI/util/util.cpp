@@ -293,6 +293,123 @@ LSTATUS GetUserRegHive(REGSAM samDesired, PHKEY phkResult)
 	return RegOpenKeyExW(HKEY_USERS, szSid, 0, samDesired, phkResult);
 }
 
+// Apply colors from current session owner's registry to the system
+// No WindowMetrics support yet
+void ApplyUserColors(bool noSystem)
+{
+	if (noSystem && IsSystemUser())
+		return;
+	HKEY hive;
+	if (GetUserRegHive(KEY_READ, &hive) != ERROR_SUCCESS)
+		return;
+	HKEY hKey;
+	if (RegOpenKeyExW(hive, L"Control Panel\\Colors", 0, KEY_READ, &hKey) != ERROR_SUCCESS)
+	{
+		RegCloseKey(hive);
+		return;
+	}
+
+	int aElements[30] =
+	{
+		COLOR_SCROLLBAR,
+		COLOR_BACKGROUND,
+		COLOR_ACTIVECAPTION,
+		COLOR_INACTIVECAPTION,
+		COLOR_MENU,
+		COLOR_WINDOW,
+		COLOR_WINDOWFRAME,
+		COLOR_MENUTEXT,
+		COLOR_WINDOWTEXT,
+		COLOR_CAPTIONTEXT,
+		COLOR_ACTIVEBORDER,
+		COLOR_INACTIVEBORDER,
+		COLOR_APPWORKSPACE,
+		COLOR_HIGHLIGHT,
+		COLOR_HIGHLIGHTTEXT,
+		COLOR_BTNFACE,
+		COLOR_BTNSHADOW,
+		COLOR_GRAYTEXT,
+		COLOR_BTNTEXT,
+		COLOR_INACTIVECAPTIONTEXT,
+		COLOR_BTNHIGHLIGHT,
+		COLOR_3DDKSHADOW,
+		COLOR_3DLIGHT,
+		COLOR_INFOTEXT,
+		COLOR_INFOBK,
+		// 25: Probably ButtonAlternateFace but it's somehow missing in winuser.h. It's rarely used anyway.
+		COLOR_HOTLIGHT,
+		COLOR_GRADIENTACTIVECAPTION,
+		COLOR_GRADIENTINACTIVECAPTION,
+		COLOR_MENUHILIGHT,
+		COLOR_MENUBAR
+	};
+
+	wchar_t regMap[30][25] =
+	{
+		L"Scrollbar",
+		L"Background",
+		L"ActiveTitle",
+		L"InactiveTitle",
+		L"Menu",
+		L"Window",
+		L"WindowFrame",
+		L"MenuText",
+		L"WindowText",
+		L"TitleText",
+		L"ActiveBorder",
+		L"InactiveBorder",
+		L"AppWorkspace",
+		L"Hilight",
+		L"HilightText",
+		L"ButtonFace",
+		L"ButtonShadow",
+		L"GrayText",
+		L"ButtonText",
+		L"InactiveTitleText",
+		L"ButtonHilight",
+		L"ButtonDkShadow",
+		L"ButtonLight",
+		L"InfoText",
+		L"InfoWindow",
+		// L"ButtonAlternateFace",
+		L"HotTrackingColor",
+		L"GradientActiveTitle",
+		L"GradientInactiveTitle",
+		L"MenuHilight",
+		L"MenuBar"
+	};
+
+	DWORD aNewColors[30];
+
+	for (int i = 0; i < 30; i++)
+	{
+		wchar_t szData[256];
+		DWORD cbData = sizeof(szData);
+		if (RegQueryValueExW(hKey, regMap[i], NULL, NULL, (LPBYTE)&szData, &cbData) != ERROR_SUCCESS)
+		{
+			RegCloseKey(hKey);
+			RegCloseKey(hive);
+			wchar_t msg[256];
+			wsprintfW(msg, L"Failed to read value %s %d", regMap[i], i);
+			MessageBoxW(0, msg, L"Error", MB_OK | MB_ICONERROR);
+			return;
+		}
+		int r, g, b;
+		if (swscanf_s(szData, L"%d %d %d", &r, &g, &b) != 3)
+		{
+			RegCloseKey(hKey);
+			RegCloseKey(hive);
+			return;
+		}
+		aNewColors[i] = RGB(r, g, b);
+	}
+
+	RegCloseKey(hKey);
+	RegCloseKey(hive);
+
+	SetSysColors(30, aElements, aNewColors);
+}
+
 void EmergencyRestart()
 {
 	typedef ULONG32(WINAPI* lpNtShutdownSystem)(int Action);

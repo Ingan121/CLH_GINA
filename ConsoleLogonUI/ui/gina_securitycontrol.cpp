@@ -201,7 +201,7 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		RECT rect;
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
-		rect.bottom = GINA_SMALL_BRD_HEIGHT;
+		rect.bottom = ginaManager::Get()->smallBrandingHeight;
 		COLORREF brdColor = RGB(255, 255, 255);
 		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
 		{
@@ -211,7 +211,7 @@ int CALLBACK ginaSecurityControl::DlgProc(HWND hWnd, UINT message, WPARAM wParam
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
-		rect.top = GINA_SMALL_BRD_HEIGHT + GINA_BAR_HEIGHT;
+		rect.top = ginaManager::Get()->smallBrandingHeight + GINA_BAR_HEIGHT;
 		COLORREF btnFace;
 		btnFace = GetSysColor(COLOR_BTNFACE);
 		hBrush = CreateSolidBrush(btnFace);

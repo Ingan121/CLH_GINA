@@ -171,7 +171,8 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
 			LoadStringW(hGinaDll, GINA_STR_HIBERNATE, shutdownStr, 256);
 			SendMessageW(hShutdownCombo, CB_ADDSTRING, 0, (LPARAM)shutdownStr);
-			SendMessageW(hShutdownCombo, CB_SETCURSEL, 2, 0);
+			// Set the default selection to Restart
+			SendMessageW(hShutdownCombo, CB_SETCURSEL, IsSystemUser() ? 1 : 2, 0);
 
 			wchar_t shutdownDesc[256];
 			LoadStringW(hGinaDll, GINA_STR_RESTART_DESC, shutdownDesc, 256);
@@ -296,6 +297,14 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		}
 		else if (LOWORD(wParam) == IDC_OK)
 		{
+			if (ginaSecurityControl::Get()->isActive)
+			{
+				// Go back to the desktop if on the Ctrl+Alt+Del screen
+				KEY_EVENT_RECORD rec;
+				rec.wVirtualKeyCode = VK_ESCAPE;
+				external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+			}
+
 			HWND hShutdownCombo = GetDlgItem(hWnd, GetRes(IDC_SHUTDOWN_COMBO));
 			if (hShutdownCombo) // 2000+ (combobox)
 			{
@@ -360,7 +369,7 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		RECT rect;
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
-		rect.bottom = GINA_SMALL_BRD_HEIGHT;
+		rect.bottom = ginaManager::Get()->smallBrandingHeight;
 		COLORREF brdColor = RGB(255, 255, 255);
 		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
 		{
@@ -370,7 +379,7 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
-		rect.top = GINA_SMALL_BRD_HEIGHT + GINA_BAR_HEIGHT;
+		rect.top = ginaManager::Get()->smallBrandingHeight + GINA_BAR_HEIGHT;
 		COLORREF btnFace;
 		btnFace = GetSysColor(COLOR_BTNFACE);
 		hBrush = CreateSolidBrush(btnFace);

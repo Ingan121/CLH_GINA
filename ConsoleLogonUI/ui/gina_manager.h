@@ -58,7 +58,12 @@ public:
 	HINSTANCE hInstance;
 	HMODULE hGinaDll;
 
+	HBITMAP hLargeBranding;
+	HBITMAP hSmallBranding;
 	HBITMAP hBar;
+
+	int largeBrandingHeight;
+	int smallBrandingHeight;
 
 	int ginaVersion;
 

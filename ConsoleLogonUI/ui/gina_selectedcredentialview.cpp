@@ -140,6 +140,7 @@ void ginaSelectedCredentialView::Create()
 	{
 		MakeWindowClassic(ginaSelectedCredentialView::Get()->hDlg);
 	}
+	ginaManager::Get()->PostThemeChange();
 	if (IsFriendlyLogonUI())
 	{
 		SetDlgItemTextW(ginaSelectedCredentialView::Get()->hDlg, GetRes(IDC_CREDVIEW_USERNAME), g_accountName.c_str());
@@ -402,7 +403,7 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		RECT rect;
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
-		rect.bottom = GINA_LARGE_BRD_HEIGHT;
+		rect.bottom = ginaManager::Get()->largeBrandingHeight;
 		COLORREF brdColor = RGB(255, 255, 255);
 		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
 		{
@@ -412,18 +413,13 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
-		rect.top = GINA_LARGE_BRD_HEIGHT + GINA_BAR_HEIGHT;
+		rect.top = ginaManager::Get()->largeBrandingHeight + GINA_BAR_HEIGHT;
 		COLORREF btnFace;
 		btnFace = GetSysColor(COLOR_BTNFACE);
 		hBrush = CreateSolidBrush(btnFace);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		return 1;
-		break;
-	}
-	case WM_CLOSE:
-	{
-		EndDialog(hWnd, 0);
 		break;
 	}
 	case WM_DESTROY:
@@ -524,7 +520,7 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		// Load the icon
 		HWND hIcon = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_ICON));
 		int iconSize = ginaManager::Get()->ginaVersion == GINA_VER_NT4 ? 64 : 32;
-		SendMessageW(hIcon, STM_SETICON, (WPARAM)LoadImageW(ginaManager::Get()->hGinaDll, MAKEINTRESOURCEW(IDI_LOCKED), IMAGE_ICON, iconSize, iconSize, LR_DEFAULTCOLOR), 0);
+		SendMessageW(hIcon, STM_SETICON, (WPARAM)LoadImageW(ginaManager::Get()->hGinaDll, MAKEINTRESOURCEW(GetRes(IDI_LOCKED)), IMAGE_ICON, iconSize, iconSize, LR_DEFAULTCOLOR), 0);
 
 		// Hide the domain chooser
 		HWND hDomainChooser = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_DOMAIN));
@@ -617,7 +613,7 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		RECT rect;
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
-		rect.bottom = GINA_SMALL_BRD_HEIGHT;
+		rect.bottom = ginaManager::Get()->smallBrandingHeight;
 		COLORREF brdColor = RGB(255, 255, 255);
 		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
 		{
@@ -627,7 +623,7 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
-		rect.top = GINA_SMALL_BRD_HEIGHT + GINA_BAR_HEIGHT;
+		rect.top = ginaManager::Get()->smallBrandingHeight + GINA_BAR_HEIGHT;
 		COLORREF btnFace;
 		btnFace = GetSysColor(COLOR_BTNFACE);
 		hBrush = CreateSolidBrush(btnFace);
@@ -723,12 +719,6 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		// Only put the domain name in NT4
 		SetDlgItemTextW(hWnd, GetRes(IDC_CHPW_DOMAIN), lpDomain);
 
-		HWND hBackup = GetDlgItem(hWnd, GetRes(IDC_CHPW_BACKUP));
-		if (hBackup)
-		{
-			ShowWindow(hBackup, SW_HIDE);
-		}
-
 		// Set the focus to the old password field
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CHPW_OLD_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
@@ -783,6 +773,18 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		else if (LOWORD(wParam) == IDC_CHPW_HELP)
 		{
 			DialogBoxW(ginaManager::Get()->hGinaDll, MAKEINTRESOURCEW(GINA_DLG_CHANGE_PWD_HLP), hWnd, (DLGPROC)HelpDlgProc);
+		}
+		else if (LOWORD(wParam) == IDC_CHPW_BACKUP) // XP only
+		{
+			// Press the password backup button in the console
+			KEY_EVENT_RECORD rec;
+			rec.wVirtualKeyCode = VK_UP;
+			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+			rec.wVirtualKeyCode = VK_RETURN;
+			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
+			// Move the focus back to the old password field
+			rec.wVirtualKeyCode = VK_DOWN;
+			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 		}
 		break;
 	}

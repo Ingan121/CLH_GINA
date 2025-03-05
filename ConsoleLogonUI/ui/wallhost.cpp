@@ -58,7 +58,7 @@ void LoadWallpaper()
 	// Note: IDesktopWallpaper from shobjidl_core.h doesn't work on pre-logon sessions (CoCreateInstance fails with class not registered)
 
 	// Load the wallpaper image
-	wchar_t wallpaperPath[MAX_PATH];
+	wchar_t wallpaperPath[MAX_PATH] = { 0 };
 	BOOL tileWallpaper = FALSE;
 	int wallpaperStyle = 0;
 
@@ -71,6 +71,9 @@ void LoadWallpaper()
 			RegQueryValueExW(hKey, L"Wallpaper", NULL, NULL, (LPBYTE)wallpaperPath, &cbData);
 
 			if (wallpaperPath[0] == NULL || !std::filesystem::exists(wallpaperPath)) {
+				RegCloseKey(hKey);
+				RegCloseKey(hive);
+				g_wpBitmap = NULL;
 				return;
 			}
 
@@ -86,9 +89,11 @@ void LoadWallpaper()
 			}
 			RegCloseKey(hKey);
 		}
+		RegCloseKey(hive);
 	}
 
 	if (wallpaperPath[0] == NULL || !std::filesystem::exists(wallpaperPath)) {
+		g_wpBitmap = NULL;
 		return;
 	}
 

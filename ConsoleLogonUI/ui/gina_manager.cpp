@@ -17,7 +17,11 @@ ginaManager::ginaManager()
 {
 	hInstance = NULL;
 	hGinaDll = NULL;
+	hLargeBranding = NULL;
+	hSmallBranding = NULL;
 	hBar = NULL;
+	largeBrandingHeight = GINA_LARGE_BRD_HEIGHT;
+	smallBrandingHeight = GINA_SMALL_BRD_HEIGHT;
 	ginaVersion = 0;
 	initedPreLogon = FALSE;
 	config = {
@@ -89,7 +93,35 @@ void ginaManager::LoadGina()
 			return;
 		}
 	}
-	hBar = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BAR));
+	if (ginaVersion >= GINA_VER_2K)
+	{
+		wchar_t customBrdLarge[MAX_PATH], customBrd[MAX_PATH], customBar[MAX_PATH];
+		if (GetConfigString(L"CustomBrdLarge", customBrdLarge, MAX_PATH))
+		{
+			hLargeBranding = (HBITMAP)LoadImageW(NULL, customBrdLarge, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+
+		}
+		if (!hLargeBranding)
+		{
+			hLargeBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BRD));
+		}
+		if (GetConfigString(L"CustomBrd", customBrd, MAX_PATH))
+		{
+			hSmallBranding = (HBITMAP)LoadImageW(NULL, customBrd, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+		}
+		if (!hSmallBranding)
+		{
+			hSmallBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BRD_SMALL));
+		}
+		if (GetConfigString(L"CustomBar", customBar, MAX_PATH))
+		{
+			hBar = (HBITMAP)LoadImageW(NULL, customBar, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+		}
+		if (!hBar)
+		{
+			hBar = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BAR));
+		}
+	}
 	initedPreLogon = IsSystemUser();
 
 #ifdef SHOWCONSOLE
@@ -124,7 +156,7 @@ void ginaManager::LoadGina()
 		while (true)
 		{
 			HWND hDlg = FindWindow(L"#32770", NULL);
-			if (hDlg)
+			if (hDlg && (IsWindowVisible(hDlg) || ginaStatusView::Get()->isActive))
 			{
 				cnt = 0;
 			}
@@ -136,6 +168,16 @@ void ginaManager::LoadGina()
 			{
 				external::ShowConsoleUI();
 				ginaManager::Get()->config.showConsole = TRUE;
+				int res = MessageBoxW(NULL, L"It seems that something went wrong with CLH_GINA. Console UI has been shown to prevent lockout. Interact with the console to make the console UI to show up.\n\nIf you are not able to interact with the console, press OK to restart the logon process, or press Cancel to restart the computer.", L"CLH_GINA", MB_OKCANCEL | MB_ICONERROR);
+				if (res == IDOK)
+				{
+					ExitProcess(0);
+				}
+				else
+				{
+					EnableShutdownPrivilege();
+					ExitWindowsEx(EWX_REBOOT, 0);
+				}
 			}
 			Sleep(2000);
 		}
@@ -163,11 +205,19 @@ void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
     int dlgWidth = rect.right - rect.left;
     int dlgHeight = rect.bottom - rect.top;
 	int dlgClientWidth = clientRect.right - clientRect.left;
-    HBITMAP hBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(isLarge ? GINA_BMP_BRD : GINA_BMP_BRD_SMALL));
-    BITMAP bmp;
+	HBITMAP hBranding = isLarge ? hLargeBranding : hSmallBranding;
+	BITMAP bmp = { 0 };
     GetObjectW(hBranding, sizeof(BITMAP), &bmp);
     int brdWidth = bmp.bmWidth;
 	int brdHeight = bmp.bmHeight;
+	if (isLarge)
+	{
+		largeBrandingHeight = brdHeight;
+	}
+	else
+	{
+		smallBrandingHeight = brdHeight;
+	}
 	int brdX = 0;
 	if (dlgClientWidth < brdWidth)
 	{
@@ -191,9 +241,9 @@ void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
     }
 
     // Create branding and bar controls
-    HWND hBrandingWnd = CreateWindowExW(0, L"STATIC", L"Branding", WS_CHILD | WS_VISIBLE | SS_BITMAP, brdX, 0, brdWidth, isLarge ? GINA_LARGE_BRD_HEIGHT : GINA_SMALL_BRD_HEIGHT, hDlg, NULL, hInstance, NULL);
+    HWND hBrandingWnd = CreateWindowExW(0, L"STATIC", L"Branding", WS_CHILD | WS_VISIBLE | SS_BITMAP, brdX, 0, brdWidth, brdHeight, hDlg, NULL, hInstance, NULL);
     SendMessageW(hBrandingWnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBranding);
-    HWND hBarWnd = CreateWindowExW(0, L"STATIC", L"Bar", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, isLarge ? GINA_LARGE_BRD_HEIGHT : GINA_SMALL_BRD_HEIGHT, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
+    HWND hBarWnd = CreateWindowExW(0, L"STATIC", L"Bar", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, brdHeight, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
     SendMessageW(hBarWnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBar);
 	    
     // Resize the bar to stretch to dlgWidth
@@ -202,7 +252,7 @@ void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
 	if (createTwoBars)
 	{
 		// Create a second bar control, initially hidden in the left side of the first bar
-		HWND hBarWnd2 = CreateWindowExW(0, L"STATIC", L"Bar2", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, isLarge ? GINA_LARGE_BRD_HEIGHT : GINA_SMALL_BRD_HEIGHT, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
+		HWND hBarWnd2 = CreateWindowExW(0, L"STATIC", L"Bar2", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, brdHeight, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
 		SendMessageW(hBarWnd2, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBar);
 
 		// Resize the second bar to stretch to dlgWidth
@@ -224,12 +274,18 @@ void ginaManager::CloseAllDialogs()
 
 void ginaManager::PostThemeChange()
 {
-	PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
-	PostMessage(ginaSelectedCredentialView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
-	PostMessage(ginaChangePwdView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
-	PostMessage(ginaSecurityControl::Get()->hDlg, WM_THEMECHANGED, 0, 0);
-	PostMessage(ginaStatusView::Get()->hDlg, WM_THEMECHANGED, 0, 0);
-	PostMessage(ginaUserSelect::Get()->hDlg, WM_THEMECHANGED, 0, 0);
+	HWND hWnds[] = {
+		ginaSelectedCredentialView::Get()->hDlg,
+		ginaSelectedCredentialViewLocked::Get()->hDlg,
+		ginaChangePwdView::Get()->hDlg,
+		ginaSecurityControl::Get()->hDlg,
+		ginaStatusView::Get()->hDlg,
+		ginaUserSelect::Get()->hDlg
+	};
+	for (int i = 0; i < sizeof(hWnds) / sizeof(HWND); i++)
+	{
+		PostMessage(hWnds[i], WM_THEMECHANGED, 0, 0);
+	}
 }
 
 int GetRes(int nt4, int xp)

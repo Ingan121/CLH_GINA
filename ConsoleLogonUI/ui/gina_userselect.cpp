@@ -116,6 +116,7 @@ void ginaUserSelect::Create()
 	{
 		MakeWindowClassic(ginaUserSelect::Get()->hDlg);
 	}
+	ginaManager::Get()->PostThemeChange();
 }
 
 void ginaUserSelect::Destroy()
@@ -361,11 +362,16 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	}
 	case WM_ERASEBKGND:
 	{
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+		{
+			return 0;
+		}
+
 		HDC hdc = (HDC)wParam;
 		RECT rect;
 		GetClientRect(hWnd, &rect);
 		int origBottom = rect.bottom;
-		rect.bottom = GINA_LARGE_BRD_HEIGHT;
+		rect.bottom = ginaManager::Get()->largeBrandingHeight;
 		COLORREF brdColor = RGB(255, 255, 255);
 		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
 		{
@@ -375,18 +381,13 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		rect.bottom = origBottom;
-		rect.top = GINA_LARGE_BRD_HEIGHT + GINA_BAR_HEIGHT;
+		rect.top = ginaManager::Get()->largeBrandingHeight + GINA_BAR_HEIGHT;
 		COLORREF btnFace;
 		btnFace = GetSysColor(COLOR_BTNFACE);
 		hBrush = CreateSolidBrush(btnFace);
 		FillRect(hdc, &rect, hBrush);
 		DeleteObject(hBrush);
 		return 1;
-		break;
-	}
-	case WM_CLOSE:
-	{
-		EndDialog(hWnd, 0);
 		break;
 	}
 	case WM_DESTROY:

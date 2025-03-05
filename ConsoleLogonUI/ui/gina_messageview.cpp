@@ -113,10 +113,6 @@ void external::MessageOptionControl_Destroy(void* actualInstance)
 	}
 }
 
-void external::MessageOrStatusView_Destroy()
-{
-}
-
 void MessageOptionControlWrapper::Press()
 {
 	_KEY_EVENT_RECORD keyrecord;

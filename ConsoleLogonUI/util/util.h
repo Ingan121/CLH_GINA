@@ -136,4 +136,5 @@ bool IsFriendlyLogonUI(void);
 bool GetUserSid(LPCWSTR lpUsername, LPWSTR lpSid, DWORD dwSidSize);
 bool GetUserHomeDir(LPWSTR lpUsername, LPWSTR lpHomeDir, DWORD dwHomeDirSize);
 LSTATUS GetUserRegHive(REGSAM samDesired = KEY_READ, PHKEY phkResult = NULL);
+void ApplyUserColors(bool noSystem = false);
 void EmergencyRestart(void);

@@ -46,21 +46,29 @@ or merge the regkey in the release zip as trusted installer.
 4. Get a copy of `msgina.dll` from Windows NT 4.0, 2000, or XP and place it in `%SYSTEMROOT%\System32`.
 
 ## Registry keys
+### General Windows logon screen customization
 * (RECOMMENDED) Disable the lockscreen
 	* Create a DWORD value named `DisableLockScreen` in `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Personalization` and set it to `1`.
 * To manually type the username, create a DWORD value named `DontDisplayLastUserName` in `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` and set it to `1`.`
 	* This is optional, as CLH_GINA handles the friendly logon as well.
 * To enable verbose logon messages, create a DWORD value named `VerboseStatus` in `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` and set it to `1`.
-* Registry keys specific to CLH_GINA is available at `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\CLH_GINA`
-	* `ShowConsole` - Set to `1` to show the console window.
-	* `ClassicTheme` - Set to `1` to make the windows use the classic theme. Set to `0` to use the default theme. If the value is not present, themes will only be enabled if the provided `msgina.dll` is from Windows XP.
-	* `HideStatusView` - Set to `1` to hide the status view. Set to `0` to show the status view. If the value is not present, the status view will be hidden if the provided `msgina.dll` is from Windows NT 4.0.
-	* `CustomWallHost` - Set to the path of the host process for the custom wallpaper. If the value is not present, CLH_GINA's custom wallpaper implementation will be used. Note that `WallpaperHost.exe` doesn't work in some cases, and the position of the wallpaper may be incorrect.
-	* `CustomWallHostArgs` - Set to the arguments for the custom wallpaper host process.
-* Customizing the pre-logon background and color scheme
-	* Color scheme: `HKEY_USERS\S-1-5-18\Control Panel\Colors`. It is recommend to run [WinClassicThemeConfig](https://gitlab.com/ftortoriello/WinClassicThemeConfig) as `NT AUTHORITY\SYSTEM` with [PsExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) or [gsudo](https://github.com/gerardog/gsudo) to change the color scheme of the logon screen.
-	* Rename `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\DefaultColors\Standard` to something else to prevent reverting to the default color scheme.
-	* Background color: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Background`, default is `0 0 0` (black). Delete the value to use the background color from the color scheme.
-	* Background image: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\Wallpaper`.
-	* Background image style: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\WallpaperStyle`, default is `0` (centered). Set to `2` for stretched, `6` for fit, and `10` for fill.
-	* Set `HKEY_USERS\S-1-5-18\Control Panel\Desktop\TileWallpaper` to `1` to tile the background image.
+### Registry keys specific to CLH_GINA 
+* Available at `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\CLH_GINA`
+* 
+|Name|Type|Description|Default Behavior|
+|----|----|-----------|-------|
+|`ShowConsole`|REG_DWORD|Set to `1` to show the console window.|Hidden|
+|`ClassicTheme`|REG_DWORD|Set to `1` to make the windows use the classic theme.<br>Set to `0` to use the default theme.|Themed only when using XP msgina.dll|
+|`HideStatusView`|REG_DWORD|Set to `1` to hide the status view.<br>Set to `0` to show the status view.|Hidden only when using NT4 msgina.dll|
+|`CustomWallHost`|REG_SZ|Set to the path of the host process for the custom wallpaper.<br>If the value is not present, CLH_GINA's custom wallpaper implementation will be used.|CLH_GINA's custom wallpaper implementation|
+|`CustomWallHostArgs`|REG_SZ|Set to the arguments for the custom wallpaper host process.|None|
+|`CustomBrd`|REG_SZ|Set to the path of a BMP file to use as the small branding image.|Small branding image from msgina.dll|
+|`CustomBrdLarge`|REG_SZ|Set to the path of a BMP file to use as the large branding image.|Large branding image from msgina.dll|
+|`CustomBar`|REG_SZ|Set to the path of a BMP file to use as the bar image.|Bar image from msgina.dll|
+### Customizing the pre-logon background and color scheme
+* Color scheme: `HKEY_USERS\S-1-5-18\Control Panel\Colors`. It is recommend to run [WinClassicThemeConfig](https://gitlab.com/ftortoriello/WinClassicThemeConfig) as `NT AUTHORITY\SYSTEM` with [PsExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) or [gsudo](https://github.com/gerardog/gsudo) to change the color scheme of the logon screen.
+* Rename `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\DefaultColors\Standard` to something else to prevent reverting to the default color scheme.
+* Background color: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Background`, default is `0 0 0` (black). Delete the value to use the background color from the color scheme.
+* Background image: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\Wallpaper`.
+* Background image style: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\WallpaperStyle`, default is `0` (centered). Set to `2` for stretched, `6` for fit, and `10` for fill.
+* Set `HKEY_USERS\S-1-5-18\Control Panel\Desktop\TileWallpaper` to `1` to tile the background image.
