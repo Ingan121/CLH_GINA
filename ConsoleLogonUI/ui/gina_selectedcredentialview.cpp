@@ -314,7 +314,7 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		// Resize the dialog (2000+)
 		SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
 
-		// Load branding and bar images (2000+)
+		// Load branding and bar images
 		ginaManager::Get()->LoadBranding(hWnd, TRUE);
 
 		// Set the focus to the password field
@@ -557,10 +557,10 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		if (ginaManager::Get()->ginaVersion >= GINA_VER_2K)
 		{
 			SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
-
-			// Load branding and bar images
-			ginaManager::Get()->LoadBranding(hWnd, FALSE);
 		}
+
+		// Load branding and bar images
+		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 
 		// Set the focus to the password field
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_PASSWORD)));

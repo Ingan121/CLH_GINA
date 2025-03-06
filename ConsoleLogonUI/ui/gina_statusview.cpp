@@ -134,20 +134,18 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	case WM_TIMER:
 	{
 		// Dirty hack around the timing issue with security view open and status view close
-		if (ginaSecurityControl::Get()->isActive)
+		if (ginaSecurityControl::Get()->isActive || ginaSelectedCredentialView::Get()->isActive)
 		{
 			ginaStatusView::Get()->Destroy();
 			return 0;
 		}
 
-		if (ginaManager::Get()->initedPreLogon != IsSystemUser() && !g_appliedUserChangeOnce)
+		if (ginaManager::Get()->initedPreLogon != IsSystemUser() && !g_appliedUserChangeOnce && !ginaSelectedCredentialViewLocked::Get()->isActive)
 		{
-			// Modern Windows doesn't revert colors back to SYSTEM ones after logoff during shutdown
-			// So we need to do it manually on logoff
-			// On logon, Windows automatically applies the user colors
-			// But it doesn't send window messages to the windows to update the colors
-			// So call this anyway and the message will be sent
-			ApplyUserColors(!IsSystemUser());
+			// When the classic theme is enabled (with SetWindowTheme, ThemeSection closing, etc.), the color scheme is not applied properly
+			// Windows doesn't properly notify windows about the color scheme change when logging on and off
+			// So we have to manually apply the color scheme here
+			ApplyUserColors();
 			// And make WallHost update the background image
 			PostMessage(wallHost::Get()->hWnd, WM_THEMECHANGED, 0, 0);
 			

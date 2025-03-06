@@ -302,7 +302,7 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		// Resize the dialog (2000+)
 		SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
 
-		// Load branding and bar images (2000+)
+		// Load branding and bar images
 		ginaManager::Get()->LoadBranding(hWnd, TRUE);
 
 		// Set focus to the username combo box

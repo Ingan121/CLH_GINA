@@ -295,10 +295,8 @@ LSTATUS GetUserRegHive(REGSAM samDesired, PHKEY phkResult)
 
 // Apply colors from current session owner's registry to the system
 // No WindowMetrics support yet
-void ApplyUserColors(bool noSystem)
+void ApplyUserColors()
 {
-	if (noSystem && IsSystemUser())
-		return;
 	HKEY hive;
 	if (GetUserRegHive(KEY_READ, &hive) != ERROR_SUCCESS)
 		return;

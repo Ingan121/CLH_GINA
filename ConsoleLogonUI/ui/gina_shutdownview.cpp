@@ -259,7 +259,7 @@ int CALLBACK ginaShutdownView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, L
 			SendMessageW(hShutdown, BM_SETCHECK, BST_CHECKED, 0);
 		}
 
-		// Load branding and bar images (2000+)
+		// Load branding and bar images
 		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 	}
 	case WM_COMMAND:

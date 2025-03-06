@@ -93,34 +93,35 @@ void ginaManager::LoadGina()
 			return;
 		}
 	}
-	if (ginaVersion >= GINA_VER_2K)
+	wchar_t customBrdLarge[MAX_PATH], customBrd[MAX_PATH], customBar[MAX_PATH];
+	if (GetConfigString(L"CustomBrd", customBrd, MAX_PATH))
 	{
-		wchar_t customBrdLarge[MAX_PATH], customBrd[MAX_PATH], customBar[MAX_PATH];
-		if (GetConfigString(L"CustomBrdLarge", customBrdLarge, MAX_PATH))
-		{
-			hLargeBranding = (HBITMAP)LoadImageW(NULL, customBrdLarge, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+		hSmallBranding = (HBITMAP)LoadImageW(NULL, customBrd, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+	}
+	if (!hSmallBranding)
+	{
+		hSmallBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BRD_SMALL));
+	}
+	if (GetConfigString(L"CustomBrdLarge", customBrdLarge, MAX_PATH))
+	{
+		hLargeBranding = (HBITMAP)LoadImageW(NULL, customBrdLarge, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 
-		}
-		if (!hLargeBranding)
-		{
-			hLargeBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BRD));
-		}
-		if (GetConfigString(L"CustomBrd", customBrd, MAX_PATH))
-		{
-			hSmallBranding = (HBITMAP)LoadImageW(NULL, customBrd, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-		}
-		if (!hSmallBranding)
-		{
-			hSmallBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BRD_SMALL));
-		}
-		if (GetConfigString(L"CustomBar", customBar, MAX_PATH))
-		{
-			hBar = (HBITMAP)LoadImageW(NULL, customBar, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-		}
-		if (!hBar)
-		{
-			hBar = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BAR));
-		}
+	}
+	if (!hLargeBranding)
+	{
+		hLargeBranding = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BRD));
+	}
+	if (!hLargeBranding)
+	{
+		hLargeBranding = hSmallBranding;
+	}
+	if (GetConfigString(L"CustomBar", customBar, MAX_PATH))
+	{
+		hBar = (HBITMAP)LoadImageW(NULL, customBar, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+	}
+	if (!hBar)
+	{
+		hBar = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BAR));
 	}
 	initedPreLogon = IsSystemUser();
 
@@ -194,7 +195,7 @@ void ginaManager::UnloadGina()
 
 void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
 {
-	if (ginaVersion == GINA_VER_NT4)
+	if (!hLargeBranding || !hSmallBranding || !hBar)
 	{
 		return;
 	}
