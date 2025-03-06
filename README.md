@@ -25,7 +25,6 @@ The following steps explain how you can contribute to the project
 * If you have installed the original ConsoleLogonHook, only replace ConsoleLogonUI.dll from this repository and proceed to step 4.
 
 1. Copy the 2 DLL files (ConsoleLogonHook.dll and ConsoleLogonUI.dll) from [Releases](https://github.com/Ingan121/CLH_GINA/releases) into %SYSTEMROOT%\System32
-	* Use the NT4 version of ConsoleLogonUI.dll if you want to use the NT4 version of msgina.dll. Otherwise, use the 2000/XP version.
 
 2. Open a CMD window as TrustedInstaller via PsExec64 and copy and paste the following commands:
 
