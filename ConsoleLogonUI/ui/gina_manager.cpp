@@ -276,6 +276,7 @@ void ginaManager::CloseAllDialogs()
 void ginaManager::PostThemeChange()
 {
 	HWND hWnds[] = {
+		wallHost::Get()->hWnd,
 		ginaSelectedCredentialView::Get()->hDlg,
 		ginaSelectedCredentialViewLocked::Get()->hDlg,
 		ginaChangePwdView::Get()->hDlg,
