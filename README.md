@@ -22,7 +22,7 @@ The following steps explain how you can contribute to the project
 > **This will require administrator privileges to be installed.**
 >
 
-* If you have installed the original ConsoleLogonHook, only replace ConsoleLogonUI.dll from this repository and proceed to step 4.
+* If you have installed the original ConsoleLogonHook, replace ConsoleLogonHook.dll and ConsoleLogonUI.dll with DLLs from this repository and proceed to step 4.
 
 1. Copy the 2 DLL files (ConsoleLogonHook.dll and ConsoleLogonUI.dll) from [Releases](https://github.com/Ingan121/CLH_GINA/releases) into %SYSTEMROOT%\System32
 
@@ -47,13 +47,13 @@ or merge the regkey in the release zip as trusted installer.
 ## Registry keys
 ### General Windows logon screen customization
 * (RECOMMENDED) Disable the lockscreen
-	* Create a DWORD value named `DisableLockScreen` in `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Personalization` and set it to `1`.
+	* Create a DWORD value named `NoLockScreen` in `HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Personalization` and set it to `1`.
 * To manually type the username, create a DWORD value named `DontDisplayLastUserName` in `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` and set it to `1`.`
 	* This is optional, as CLH_GINA handles the friendly logon as well.
 * To enable verbose logon messages, create a DWORD value named `VerboseStatus` in `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` and set it to `1`.
 ### Registry keys specific to CLH_GINA 
 * Available at `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\LogonUI\CLH_GINA`
-* 
+
 |Name|Type|Description|Default Behavior|
 |----|----|-----------|-------|
 |`ShowConsole`|REG_DWORD|Set to `1` to show the console window.|Hidden|
@@ -64,10 +64,14 @@ or merge the regkey in the release zip as trusted installer.
 |`CustomBrd`|REG_SZ|Set to the path of a BMP file to use as the small branding image.|Small branding image from msgina.dll|
 |`CustomBrdLarge`|REG_SZ|Set to the path of a BMP file to use as the large branding image.|Large branding image from msgina.dll|
 |`CustomBar`|REG_SZ|Set to the path of a BMP file to use as the bar image.|Bar image from msgina.dll|
+|`OptionsExpanded`|REG_DWORD|Set to `1` to expand the options by default.<br>Set to `0` to collapse the options by default.<br>This key is internally managed.|Collapsed|
 ### Customizing the pre-logon background and color scheme
-* Color scheme: `HKEY_USERS\S-1-5-18\Control Panel\Colors`. It is recommend to run [WinClassicThemeConfig](https://gitlab.com/ftortoriello/WinClassicThemeConfig) as `NT AUTHORITY\SYSTEM` with [PsExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) or [gsudo](https://github.com/gerardog/gsudo) to change the color scheme of the logon screen.
-* Rename `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\DefaultColors\Standard` to something else to prevent reverting to the default color scheme.
-* Background color: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Background`, default is `0 0 0` (black). Delete the value to use the background color from the color scheme.
+* Color scheme: `HKEY_USERS\S-1-5-18\Control Panel\Colors`.
+	* It is recommend to run [WinClassicThemeConfig](https://gitlab.com/ftortoriello/WinClassicThemeConfig) as `NT AUTHORITY\SYSTEM` with [PsExec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec) or [gsudo](https://github.com/gerardog/gsudo) to change the color scheme of the logon screen.
+	* Or set `CustomWallHost` to the path of the WinClassicThemeConfig executable temporarily and go to the switch user screen to change the color scheme and window metrics.
+	* Make sure to remove the `CustomWallHost` value after changing the color scheme, as it is possible to spawn a SYSTEM cmd.exe with WinClassicThemeConfig through file dialogs.
+* To prevent reverting to the default color scheme, rename `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\DefaultColors\Standard` to something else.
+* **Background color: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Background`, default is `0 0 0` (black). Delete the value to use the background color from the color scheme.**
 * Background image: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\Wallpaper`.
 * Background image style: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\WallpaperStyle`, default is `0` (centered). Set to `2` for stretched, `6` for fit, and `10` for fill.
 * Set `HKEY_USERS\S-1-5-18\Control Panel\Desktop\TileWallpaper` to `1` to tile the background image.

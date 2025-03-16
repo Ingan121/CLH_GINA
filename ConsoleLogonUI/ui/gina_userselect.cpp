@@ -294,8 +294,29 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		HWND optBtn = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_OPTIONS));
 		if (optBtn)
 		{
+			// Load the options button state
+			BOOL isShutdownVisible = GetConfigInt(L"OptionsExpanded", 0);
+			if (!isShutdownVisible)
+			{
+				HWND hShutdown = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_SHUTDOWN));
+				ShowWindow(hShutdown, SW_HIDE);
+				RECT shutdownRect;
+				GetWindowRect(hShutdown, &shutdownRect);
+				MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&shutdownRect, 2);
+				HWND controlsToMove[] = {
+					hOK,
+					hCancel
+				};
+				for (int i = 0; i < sizeof(controlsToMove) / sizeof(HWND); i++)
+				{
+					RECT controlRect;
+					GetWindowRect(controlsToMove[i], &controlRect);
+					MapWindowPoints(HWND_DESKTOP, hWnd, (LPPOINT)&controlRect, 2);
+					SetWindowPos(controlsToMove[i], NULL, controlRect.left + shutdownRect.right - shutdownRect.left, controlRect.top, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+				}
+			}
 			wchar_t optBtnStr[256];
-			LoadStringW(ginaManager::Get()->hGinaDll, GINA_STR_OPTBTN_COLLAPSE, optBtnStr, 256);
+			LoadStringW(ginaManager::Get()->hGinaDll, isShutdownVisible ? GINA_STR_OPTBTN_COLLAPSE : GINA_STR_OPTBTN_EXPAND, optBtnStr, 256);
 			SetDlgItemTextW(hWnd, GetRes(IDC_CREDVIEW_OPTIONS), optBtnStr);
 		}
 
@@ -357,6 +378,7 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 			wchar_t optBtnStr[256];
 			LoadStringW(hGinaDll, isShutdownVisible ? GINA_STR_OPTBTN_EXPAND : GINA_STR_OPTBTN_COLLAPSE, optBtnStr, 256);
 			SetDlgItemTextW(hWnd, 1514, optBtnStr);
+			SetConfigInt(L"OptionsExpanded", isShutdownVisible ? 0 : 1);
 		}
 		break;
 	}

@@ -7,6 +7,8 @@
 #define SHOWCONSOLE
 #endif
 
+#define WM_NCUAHDRAWCAPTION 0x00AE
+
 // msgina.dll resources
 #define GINA_DLL_NAME L"msgina.dll"
 #define GINA_BMP_BRD 107

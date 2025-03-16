@@ -27,7 +27,7 @@ void external::StatusView_SetActive(const wchar_t* text)
 	g_statusText = text;
 
 	std::thread([=] {
-		ginaManager::Get()->PostThemeChange();
+		//ginaManager::Get()->PostThemeChange();
 
 		if (ginaStatusView::Get()->isActive.exchange(true)) {
 			ginaSelectedCredentialView::Get()->Destroy();

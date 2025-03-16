@@ -157,7 +157,7 @@ void wallHost::Create()
 	wc.hInstance = hInstance;
 	wc.lpszClassName = L"ClhGinaWallHost";
 	RegisterClass(&wc);
-	wallHost::Get()->hWnd = CreateWindowExW(WS_EX_TOOLWINDOW, L"ClhGinaWallHost", L"CLH_GINA Wallpaper Host", WS_POPUP | WS_VISIBLE, 0, 0, screenRect.right, screenRect.bottom, 0, 0, hInstance, 0);
+	wallHost::Get()->hWnd = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, L"ClhGinaWallHost", L"CLH_GINA Wallpaper Host", WS_POPUP | WS_VISIBLE, 0, 0, screenRect.right, screenRect.bottom, 0, 0, hInstance, 0);
 	SetWindowPos(wallHost::Get()->hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 
 	LoadWallpaper();
@@ -363,6 +363,17 @@ LRESULT CALLBACK wallHost::WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARA
 	case WM_THEMECHANGED:
 	{
 		LoadWallpaper();
+		InvalidateRect(hWnd, NULL, TRUE);
+		break;
+	}
+	case WM_DISPLAYCHANGE:
+	{
+		RECT screenRect;
+		screenRect.left = 0;
+		screenRect.top = 0;
+		screenRect.right = GetSystemMetrics(SM_CXSCREEN);
+		screenRect.bottom = GetSystemMetrics(SM_CYSCREEN);
+		SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, screenRect.right, screenRect.bottom, SWP_NOZORDER | SWP_NOMOVE);
 		InvalidateRect(hWnd, NULL, TRUE);
 		break;
 	}

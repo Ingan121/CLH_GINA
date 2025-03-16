@@ -178,9 +178,9 @@ namespace memory
     }
 
     template<class T>
-    static T FindPatternCached(std::string functionName, std::vector<std::string> signatures, bool bFindTop = false)
+    static T FindPatternCached(std::string functionName, std::vector<std::string> signatures, bool bFindTop = false, std::wstring dllName = L"ConsoleLogon.dll")
     {
-        uintptr_t base_address = (uintptr_t)GetModuleHandle(L"ConsoleLogon.dll");
+        uintptr_t base_address = (uintptr_t)GetModuleHandle(dllName.c_str());
         ////offsetCache.find(functionName);
         //
         //for (int i = 0; i < signatures.size(); ++i)

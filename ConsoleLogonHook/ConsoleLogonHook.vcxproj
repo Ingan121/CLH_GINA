@@ -272,6 +272,7 @@
     <ClInclude Include="ui\ui_sink.h" />
     <ClInclude Include="ui\ui_statusview.h" />
     <ClInclude Include="ui\ui_userselect.h" />
+    <ClInclude Include="ui\ui_uxtheme.h" />
     <ClInclude Include="util\interop.h" />
     <ClInclude Include="util\memory_man.h" />
     <ClInclude Include="util\util.h" />
@@ -284,6 +285,7 @@
     <ClCompile Include="ui\ui_selectedcredentialview.cpp" />
     <ClCompile Include="ui\ui_statusview.cpp" />
     <ClCompile Include="ui\ui_userselect.cpp" />
+    <ClCompile Include="ui\ui_uxtheme.cpp" />
     <ClCompile Include="util\util.cpp" />
   </ItemGroup>
   <ItemGroup>

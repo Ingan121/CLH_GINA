@@ -104,6 +104,20 @@ int GetConfigInt(LPCWSTR lpValueName, int defaultValue)
 	return dwData;
 }
 
+bool SetConfigInt(LPCWSTR lpValueName, int value)
+{
+	HKEY hKey;
+	if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\LogonUI\\CLH_GINA", 0, KEY_WRITE, &hKey) != ERROR_SUCCESS)
+		return false;
+	if (RegSetValueExW(hKey, lpValueName, 0, REG_DWORD, (LPBYTE)&value, sizeof(value)) != ERROR_SUCCESS)
+	{
+		RegCloseKey(hKey);
+		return false;
+	}
+	RegCloseKey(hKey);
+	return true;
+}
+
 bool GetConfigString(LPCWSTR lpValueName, LPWSTR lpBuffer, DWORD dwBufferSize, LPCWSTR lpDefaultValue)
 {
 	if (!lpBuffer || !dwBufferSize)

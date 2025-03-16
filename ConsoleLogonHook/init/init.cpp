@@ -12,6 +12,7 @@
 #include "../ui/ui_statusview.h"
 #include "ui/ui_selectedcredentialview.h"
 #include "ui/ui_userselect.h"
+#include "ui/ui_uxtheme.h"
 #include "util\interop.h"
 #include "util\memory_man.h"
 
@@ -88,6 +89,12 @@ namespace init
         }
         //MessageBox(0, L"dbg2", 0, 0);
 
+		auto uxthemedll = (uintptr_t)LoadLibraryW(L"uxtheme.dll");
+        if (!uxthemedll)
+        {
+            MessageBoxW(0, L"what the fuck", L"what the fuck", 0);
+        }
+
         fOutputDebugStringW = decltype(fOutputDebugStringW)(GetProcAddress(GetModuleHandle(L"api-ms-win-core-debug-l1-1-0.dll"), "OutputDebugStringW"));
         Hook(fOutputDebugStringW, OutputDebugStringW_Hook);
         //EditControl__Repaint = (decltype(EditControl__Repaint))(baseaddress + 0x44528);
@@ -106,6 +113,7 @@ namespace init
         //MessageBox(0, L"dbg3.4", 0, 0);
         uiSelectedCredentialView::InitHooks(baseaddress);
         //MessageBox(0, L"dbg4", 0, 0);
+		uiUxTheme::InitHooks(uxthemedll);
         memory::SaveOffsetCache();
 
         MinimizeLogonConsole();

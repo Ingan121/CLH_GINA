@@ -372,6 +372,9 @@
     <ClInclude Include="util\memory_man.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ui\ui_uxtheme.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -396,6 +399,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="util\util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ui\ui_uxtheme.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

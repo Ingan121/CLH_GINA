@@ -130,6 +130,7 @@ DWORD GetLoggedOnUserInfo(LPWSTR lpUsername, UINT cchUsernameMax, LPWSTR lpDomai
 int GetLastLogonUser(LPWSTR lpUsername, UINT cchUsernameMax);
 bool GetUserLogonTime(LPSYSTEMTIME lpSystemTime);
 int GetConfigInt(LPCWSTR lpValueName, int defaultValue);
+bool SetConfigInt(LPCWSTR lpValueName, int value);
 bool GetConfigString(LPCWSTR lpValueName, LPWSTR lpBuffer, DWORD dwBufferSize, LPCWSTR lpDefaultValue = NULL);
 bool IsSystemUser(void);
 bool IsFriendlyLogonUI(void);
