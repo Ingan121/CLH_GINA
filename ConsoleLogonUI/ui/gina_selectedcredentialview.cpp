@@ -166,6 +166,7 @@ void ginaSelectedCredentialView::Show()
 	CenterWindow(dlg->hDlg);
 	ShowWindow(dlg->hDlg, SW_SHOW);
 	UpdateWindow(dlg->hDlg);
+	SetForegroundWindow(dlg->hDlg);
 }
 
 void ginaSelectedCredentialView::Hide()
@@ -503,6 +504,7 @@ void ginaSelectedCredentialViewLocked::Show()
 	CenterWindow(dlg->hDlg);
 	ShowWindow(dlg->hDlg, SW_SHOW);
 	UpdateWindow(dlg->hDlg);
+	SetForegroundWindow(dlg->hDlg);
 }
 
 void ginaSelectedCredentialViewLocked::Hide()
