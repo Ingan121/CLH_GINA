@@ -119,6 +119,15 @@ void external::EditControl_Destroy(void* actualInstance)
 	it--;
 }
 
+LRESULT CALLBACK PasswordEditSubclassProc(
+	HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+	UINT_PTR uIdSubclass, DWORD_PTR dwRefData
+) {
+	if (msg == EM_SHOWBALLOONTIP)
+		return 0;
+	return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
 ginaSelectedCredentialView* ginaSelectedCredentialView::Get()
 {
 	static ginaSelectedCredentialView dlg;
@@ -264,6 +273,13 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		ShowWindow(hDomainChooserLabel, SW_HIDE);
 		dlgHeightToReduce += domainRect.bottom - domainRect.top + 8;
 		bottomBtnYToMove = domainRect.bottom - domainRect.top + 8;
+
+		// Hide the caps-lock warning balloon
+		if (ginaManager::Get()->config.hideCapsLockBalloon)
+		{
+			HWND hPassword = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_PASSWORD));
+			SetWindowSubclass(hPassword, PasswordEditSubclassProc, 1, 0);
+		}
 
 		// Hide the dial-up checkbox
 		HWND hDialup = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_DIALUP));
@@ -555,6 +571,13 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		ShowWindow(hDomainChooserLabel, SW_HIDE);
 		dlgHeightToReduce = domainRect.bottom - domainRect.top + 8;
 		bottomBtnYToMove = domainRect.bottom - domainRect.top + 8;
+
+		// Hide the caps-lock warning balloon
+		if (ginaManager::Get()->config.hideCapsLockBalloon)
+		{
+			HWND hPassword = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_PASSWORD));
+			SetWindowSubclass(hPassword, PasswordEditSubclassProc, 1, 0);
+		}
 
 		// Hide the options button and move the OK and Cancel buttons right (2000+)
 		HWND hOptions = GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_OPTIONS));

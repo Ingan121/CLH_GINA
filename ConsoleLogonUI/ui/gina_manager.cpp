@@ -151,6 +151,16 @@ void ginaManager::LoadGina()
 		config.hideStatusView = hideStatusView;
 	}
 
+	int hideCapsLockBalloon = GetConfigInt(L"HideCapsLockBalloon", -1);
+	if (hideCapsLockBalloon == -1)
+	{
+		config.hideCapsLockBalloon = ginaVersion != GINA_VER_XP;
+	}
+	else
+	{
+		config.hideCapsLockBalloon = hideCapsLockBalloon;
+	}
+
 	// Last resort to show console if something goes wrong
 	std::thread([] {
 		int cnt = 0;

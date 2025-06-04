@@ -52,6 +52,7 @@ struct ginaConfig {
 	BOOL showConsole;
 	BOOL classicTheme;
 	BOOL hideStatusView;
+	BOOL hideCapsLockBalloon;
 };
 
 class ginaManager
