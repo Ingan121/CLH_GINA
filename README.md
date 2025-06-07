@@ -73,6 +73,6 @@ or merge the regkey in the release zip as trusted installer.
 	* Make sure to remove the `CustomWallHost` value after changing the color scheme, as it is possible to spawn a SYSTEM cmd.exe with WinClassicThemeConfig through file dialogs.
 * To prevent reverting to the default color scheme, rename `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\DefaultColors\Standard` to something else.
 * **Background color: `HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Background`, default is `0 0 0` (black). Delete the value to use the background color from the color scheme.**
-* Background image: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\Wallpaper`.
-* Background image style: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\WallpaperStyle`, default is `0` (centered). Set to `2` for stretched, `6` for fit, and `10` for fill.
+* Background image: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\Wallpaper`. (REG_SZ, create if missing)
+* Background image style: `HKEY_USERS\S-1-5-18\Control Panel\Desktop\WallpaperStyle`, default is `0` (centered). Set to `2` for stretched, `6` for fit, and `10` for fill. (REG_SZ too, create if missing)
 * Set `HKEY_USERS\S-1-5-18\Control Panel\Desktop\TileWallpaper` to `1` to tile the background image.
