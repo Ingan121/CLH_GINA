@@ -770,6 +770,8 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		// Set the focus to the old password field
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CHPW_OLD_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
+
+		ginaManager::Get()->LoadBranding(hWnd, FALSE);
 		break;
 	}
 	case WM_COMMAND:
@@ -834,6 +836,36 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 			rec.wVirtualKeyCode = VK_DOWN;
 			external::ConsoleUIView__HandleKeyInputExternal(external::GetConsoleUIView(), &rec);
 		}
+		break;
+	}
+	case WM_ERASEBKGND:
+	{
+		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
+		{
+			return 0;
+		}
+
+		HDC hdc = (HDC)wParam;
+		RECT rect;
+		GetClientRect(hWnd, &rect);
+		int origBottom = rect.bottom;
+		rect.bottom = ginaManager::Get()->smallBrandingHeight;
+		COLORREF brdColor = RGB(255, 255, 255);
+		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
+		{
+			brdColor = RGB(90, 124, 223);
+		}
+		HBRUSH hBrush = CreateSolidBrush(brdColor);
+		FillRect(hdc, &rect, hBrush);
+		DeleteObject(hBrush);
+		rect.bottom = origBottom;
+		rect.top = ginaManager::Get()->smallBrandingHeight + GINA_BAR_HEIGHT;
+		COLORREF btnFace;
+		btnFace = GetSysColor(COLOR_BTNFACE);
+		hBrush = CreateSolidBrush(btnFace);
+		FillRect(hdc, &rect, hBrush);
+		DeleteObject(hBrush);
+		return 1;
 		break;
 	}
 	case WM_DESTROY:
