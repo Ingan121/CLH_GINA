@@ -20,8 +20,6 @@ ginaManager::ginaManager()
 	hLargeBranding = NULL;
 	hSmallBranding = NULL;
 	hBar = NULL;
-	largeBrandingHeight = GINA_LARGE_BRD_HEIGHT;
-	smallBrandingHeight = GINA_SMALL_BRD_HEIGHT;
 	ginaVersion = 0;
 	initedPreLogon = FALSE;
 	config = {
@@ -33,6 +31,7 @@ ginaManager::ginaManager()
 
 void ginaManager::LoadGina()
 {
+	// Load DLL
 	hGinaDll = LoadLibraryExW(GINA_DLL_NAME, NULL, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
 	if (!hGinaDll)
 	{
@@ -93,6 +92,8 @@ void ginaManager::LoadGina()
 			return;
 		}
 	}
+
+	// Load branding images
 	wchar_t customBrdLarge[MAX_PATH], customBrd[MAX_PATH], customBar[MAX_PATH];
 	if (GetConfigString(L"CustomBrd", customBrd, MAX_PATH))
 	{
@@ -124,6 +125,58 @@ void ginaManager::LoadGina()
 		hBar = LoadBitmapW(hGinaDll, MAKEINTRESOURCEW(GINA_BMP_BAR));
 	}
 	initedPreLogon = IsSystemUser();
+
+	// Options related to branding images
+	_crBrandBG = GetConfigInt(L"CustomBrdBG", CLR_DEFAULT);
+	if (_crBrandBG == CLR_DEFAULT)
+	{
+		_crBrandBG = (ginaVersion == GINA_VER_XP) ? RGB(90, 124, 223) : RGB(255, 255, 255);
+	}
+
+	_fCenterBrand = GetConfigInt(L"CenterBrand", (ginaVersion == GINA_VER_XP));
+
+	// Get branding image sizes
+	BITMAP bm;
+	if (hLargeBranding && GetObjectW(hLargeBranding, sizeof(bm), &bm))
+	{
+		_sizeLargeBrand.cx = bm.bmWidth;
+		_sizeLargeBrand.cy = bm.bmHeight;
+	}
+	if (hSmallBranding && GetObjectW(hSmallBranding, sizeof(bm), &bm))
+	{
+		_sizeSmallBrand.cx = bm.bmWidth;
+		_sizeSmallBrand.cy = bm.bmHeight;
+	}
+	if (hBar && GetObjectW(hBar, sizeof(bm), &bm))
+	{
+		_sizeBar.cx = bm.bmWidth;
+		_sizeBar.cy = bm.bmHeight;
+	}
+
+	// Load "Built on NT Technology" text and font
+	if (ginaVersion == GINA_VER_2K)
+	{
+		_szBuiltOnNT[0] = L'\0';
+		LoadStringW(hGinaDll, GINA_STR_BUILT_ON_NT, _szBuiltOnNT, ARRAYSIZE(_szBuiltOnNT));
+
+		int iHeight = 0;
+		WCHAR szHeight[10];
+		if (LoadStringW(hGinaDll, GINA_STR_BUILT_ON_NT_FONT_SIZE, szHeight, ARRAYSIZE(szHeight)))
+		{
+			HDC hdc = GetDC(NULL);
+			iHeight = MulDiv(_wtol(szHeight), GetDeviceCaps(hdc, LOGPIXELSY), 96);
+			ReleaseDC(NULL, hdc);
+		}
+
+		LOGFONTW lf = { 0 };
+		lf.lfFaceName[0] = L'\0';
+		LoadStringW(hGinaDll, GINA_STR_BUILT_ON_NT_FONT, lf.lfFaceName, ARRAYSIZE(lf.lfFaceName));
+		lf.lfHeight = -iHeight;
+		_hfontBuiltOnNT = CreateFontIndirectW(&lf);
+
+		lf.lfWeight = FW_BOLD;
+		_hfontBuiltOnNTBold = CreateFontIndirectW(&lf);
+	}
 
 #ifdef SHOWCONSOLE
 	config.showConsole = TRUE;
@@ -203,75 +256,144 @@ void ginaManager::UnloadGina()
 	}
 }
 
-void ginaManager::LoadBranding(HWND hDlg, BOOL isLarge, BOOL createTwoBars)
+void ginaManager::MoveChildrenForBranding(HWND hwnd, BOOL fLarge)
 {
-	if (!hLargeBranding || !hSmallBranding || !hBar)
+	RECT rc;
+	int dy = fLarge ? _sizeLargeBrand.cy : _sizeSmallBrand.cy;
+
+	for (HWND hwndSibling = GetWindow(hwnd, GW_CHILD); hwndSibling; hwndSibling = GetWindow(hwndSibling, GW_HWNDNEXT))
 	{
-		return;
+		GetWindowRect(hwndSibling, &rc);
+		MapWindowPoints(NULL, hwnd, (LPPOINT)&rc, 2);
+		OffsetRect(&rc, 0, dy);
+
+		SetWindowPos(hwndSibling, NULL,
+			rc.left, rc.top, 0, 0,
+			SWP_NOZORDER | SWP_NOSIZE);
 	}
 
-    RECT rect, clientRect;
-    GetWindowRect(hDlg, &rect);
-	GetClientRect(hDlg, &clientRect);
-    int dlgWidth = rect.right - rect.left;
-    int dlgHeight = rect.bottom - rect.top;
-	int dlgClientWidth = clientRect.right - clientRect.left;
-	HBITMAP hBranding = isLarge ? hLargeBranding : hSmallBranding;
-	BITMAP bmp = { 0 };
-    GetObjectW(hBranding, sizeof(BITMAP), &bmp);
-    int brdWidth = bmp.bmWidth;
-	int brdHeight = bmp.bmHeight;
-	if (isLarge)
-	{
-		largeBrandingHeight = brdHeight;
-	}
-	else
-	{
-		smallBrandingHeight = brdHeight;
-	}
-	int brdX = 0;
-	if (dlgClientWidth < brdWidth)
-	{
-		dlgWidth = dlgWidth - dlgClientWidth + brdWidth;
-	}
-	else if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-	{
-		brdX = (dlgWidth - brdWidth) / 2;
-	}
-    int topAreaHeight = brdHeight + GINA_BAR_HEIGHT;
+	GetWindowRect(hwnd, &rc);
+	MapWindowPoints(NULL, GetParent(hwnd), (LPPOINT)&rc, 2);
 
-    // Move all existing controls down
-    HWND hChild = GetWindow(hDlg, GW_CHILD);
-    while (hChild != NULL)
-    {
-        RECT childRect;
-        GetWindowRect(hChild, &childRect);
-        MapWindowPoints(HWND_DESKTOP, hDlg, (LPPOINT)&childRect, 2);
-        SetWindowPos(hChild, NULL, childRect.left, childRect.top + topAreaHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-        hChild = GetWindow(hChild, GW_HWNDNEXT);
-    }
+	SetWindowPos(hwnd, NULL,
+		0, 0, (rc.right - rc.left), (rc.bottom - rc.top) + dy,
+		SWP_NOZORDER | SWP_NOMOVE);
+}
 
-    // Create branding and bar controls
-    HWND hBrandingWnd = CreateWindowExW(0, L"STATIC", L"Branding", WS_CHILD | WS_VISIBLE | SS_BITMAP, brdX, 0, brdWidth, brdHeight, hDlg, NULL, hInstance, NULL);
-    SendMessageW(hBrandingWnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBranding);
-    HWND hBarWnd = CreateWindowExW(0, L"STATIC", L"Bar", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, brdHeight, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
-    SendMessageW(hBarWnd, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBar);
-	    
-    // Resize the bar to stretch to dlgWidth
-    SetWindowPos(hBarWnd, NULL, 0, brdHeight, dlgWidth, GINA_BAR_HEIGHT, SWP_NOZORDER);
+void ginaManager::PaintBranding(HDC hdc, RECT *prc, BOOL fLarge /* = FALSE */, int iBarOffset /* = 0 */)
+{
+	HBITMAP hbm = fLarge ? hLargeBranding : hSmallBranding;
+	PSIZE psize = fLarge ? &_sizeLargeBrand : &_sizeSmallBrand;
+	HDC hdcMem = CreateCompatibleDC(hdc);
 
-	if (createTwoBars)
+	// Paint BG color
+	RECT rcFill = *prc;
+	rcFill.bottom = rcFill.top + psize->cy;
+
+	HBRUSH hbrFill = CreateSolidBrush(_crBrandBG);
+	FillRect(hdc, &rcFill, hbrFill);
+	DeleteObject(hbrFill);
+
+	// Paint brand image
+	int xBrand = 0;
+	if (_fCenterBrand)
+		xBrand = ((prc->right - prc->left) - psize->cx) / 2;
+
+	HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbm);
+	BitBlt(
+		hdc,
+		xBrand, 0,
+		psize->cx,
+		psize->cy,
+		hdcMem,
+		0, 0,
+		SRCCOPY
+	);
+	SelectObject(hdcMem, hbmOld);
+
+	// Paint bar image
+	hbmOld = (HBITMAP)SelectObject(hdcMem, hBar);
+	StretchBlt(
+		hdc,
+		iBarOffset, psize->cy,
+		prc->right - prc->left,
+		_sizeBar.cy,
+		hdcMem,
+		0, 0,
+		_sizeBar.cx,
+		_sizeBar.cy,
+		SRCCOPY
+	);
+	if (iBarOffset)
 	{
-		// Create a second bar control, initially hidden in the left side of the first bar
-		HWND hBarWnd2 = CreateWindowExW(0, L"STATIC", L"Bar2", WS_CHILD | WS_VISIBLE | SS_BITMAP, 0, brdHeight, dlgWidth, GINA_BAR_HEIGHT, hDlg, NULL, hInstance, NULL);
-		SendMessageW(hBarWnd2, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBar);
+		StretchBlt(
+			hdc,
+			iBarOffset - (prc->right - prc->left), psize->cy,
+			prc->right - prc->left,
+			_sizeBar.cy,
+			hdcMem,
+			0, 0,
+			_sizeBar.cx,
+			_sizeBar.cy,
+			SRCCOPY
+		);
+	}
+	SelectObject(hdcMem, hbmOld);
 
-		// Resize the second bar to stretch to dlgWidth
-		SetWindowPos(hBarWnd2, NULL, -dlgWidth, brdHeight, dlgWidth, GINA_BAR_HEIGHT, SWP_NOZORDER);
+	// Paint "Built on NT Technology" text
+	if (fLarge && _szBuiltOnNT[0] && _hfontBuiltOnNT)
+	{
+		int x = prc->left + xBrand + MulDiv(186, GetDeviceCaps(hdc, LOGPIXELSX), 96);
+		int y = prc->top + MulDiv(68, GetDeviceCaps(hdc, LOGPIXELSY), 96);
+		MoveToEx(hdc, x, y, nullptr);
+
+		UINT uAlignOld = SetTextAlign(hdc, TA_UPDATECP);
+		HFONT hfontOld = (HFONT)SelectObject(hdc, _hfontBuiltOnNT);
+
+		LPWSTR pszText = _szBuiltOnNT;
+		LPWSTR pszCurText = pszText;
+		int iChunkLength = 0;
+		BOOL fBold = FALSE;
+		BOOL fStillDrawing = TRUE;
+		do
+		{
+			BOOL fPaint = TRUE;
+			if (!_wcsnicmp(pszText, L"<B>", 3))
+			{
+				fBold = TRUE;
+				pszText += 3;
+			}
+			else if (!_wcsnicmp(pszText, L"</B>", 4))
+			{
+				fBold = FALSE;
+				pszText += 4;
+			}
+			else if (*pszText)
+			{
+				iChunkLength++;
+				pszText++;
+				fPaint = FALSE;
+			}
+			else
+			{
+				fStillDrawing = FALSE;
+			}
+
+			if (fPaint)
+			{
+				TextOutW(hdc, 0, 0, pszCurText, iChunkLength);
+				iChunkLength = 0;
+				pszCurText = pszText;
+				SelectObject(hdc, fBold ? _hfontBuiltOnNTBold : _hfontBuiltOnNT);
+			}
+		}
+		while (fStillDrawing);
+
+		SelectObject(hdc, hfontOld);
+		SetTextAlign(hdc, uAlignOld);
 	}
 
-    // Resize the dialog
-    SetWindowPos(hDlg, NULL, 0, 0, dlgWidth, dlgHeight + topAreaHeight, SWP_NOZORDER | SWP_NOMOVE);
+	DeleteDC(hdcMem);
 }
 
 void ginaManager::CloseAllDialogs()

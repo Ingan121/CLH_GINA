@@ -127,9 +127,9 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 	{
 	case WM_INITDIALOG:
 	{
-		ginaManager::Get()->LoadBranding(hWnd, FALSE, TRUE);
+		ginaManager::Get()->MoveChildrenForBranding(hWnd, FALSE);
 		SetTimer(hWnd, 20, 20, NULL);
-		break;
+		[[fallthrough]];
 	}
 	case WM_TIMER:
 	{
@@ -161,46 +161,14 @@ int CALLBACK ginaStatusView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		GetClientRect(hWnd, &rect);
 		int dlgWidth = rect.right - rect.left;
 		int barOffset = ginaStatusView::Get()->barOffset;
-		int brdHeight = ginaManager::Get()->smallBrandingHeight;
-		HWND bar1 = FindWindowExW(hWnd, NULL, L"STATIC", L"Bar");
-		HWND bar2 = FindWindowExW(hWnd, bar1, L"STATIC", L"Bar2");
-		SetWindowPos(bar1, NULL, barOffset, brdHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
-		SetWindowPos(bar2, NULL, barOffset - dlgWidth, brdHeight, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+		HDC hdc = GetDC(hWnd);
+		ginaManager::Get()->PaintBranding(hdc, &rect, FALSE, barOffset);
+		ReleaseDC(hWnd, hdc);
 		ginaStatusView::Get()->barOffset = (barOffset + 5) % dlgWidth;
 		break;
 	}
 	case WM_COMMAND:
 	{
-		break;
-	}
-	case WM_ERASEBKGND:
-	{
-		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
-		{
-			return 0;
-		}
-
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = ginaManager::Get()->smallBrandingHeight;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = ginaManager::Get()->smallBrandingHeight + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
 		break;
 	}
 	case WM_DESTROY:
