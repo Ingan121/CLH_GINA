@@ -274,6 +274,9 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		dlgHeightToReduce += domainRect.bottom - domainRect.top + 8;
 		bottomBtnYToMove = domainRect.bottom - domainRect.top + 8;
 
+		// Disable Cancel button
+		EnableWindow(GetDlgItem(hWnd, IDCANCEL), FALSE);
+
 		// Hide the caps-lock warning balloon
 		if (ginaManager::Get()->config.hideCapsLockBalloon)
 		{
@@ -551,6 +554,9 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		ShowWindow(hDomainChooserLabel, SW_HIDE);
 		dlgHeightToReduce = domainRect.bottom - domainRect.top + 8;
 		bottomBtnYToMove = domainRect.bottom - domainRect.top + 8;
+
+		// Disable Cancel button
+		EnableWindow(GetDlgItem(hWnd, IDCANCEL), FALSE);
 
 		// Hide the caps-lock warning balloon
 		if (ginaManager::Get()->config.hideCapsLockBalloon)

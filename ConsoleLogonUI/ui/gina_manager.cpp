@@ -259,7 +259,7 @@ void ginaManager::UnloadGina()
 void ginaManager::MoveChildrenForBranding(HWND hwnd, BOOL fLarge)
 {
 	RECT rc;
-	int dy = fLarge ? _sizeLargeBrand.cy : _sizeSmallBrand.cy;
+	int dy = _sizeBar.cy + (fLarge ? _sizeLargeBrand.cy : _sizeSmallBrand.cy);
 
 	for (HWND hwndSibling = GetWindow(hwnd, GW_CHILD); hwndSibling; hwndSibling = GetWindow(hwndSibling, GW_HWNDNEXT))
 	{
