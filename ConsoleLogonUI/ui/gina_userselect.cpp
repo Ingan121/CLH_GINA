@@ -327,7 +327,7 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
 
-		ginaManager::Get()->MoveChildrenForBranding(hWnd, FALSE);
+		ginaManager::Get()->MoveChildrenForBranding(hWnd, TRUE);
 
 		break;
 	}
