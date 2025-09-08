@@ -64,6 +64,8 @@ or merge the regkey in the release zip as trusted installer.
 |`CustomWallHostArgs`|REG_SZ|Set to the arguments for the custom wallpaper host process.|None|
 |`CustomBrd`|REG_SZ|Set to the path of a BMP file to use as the small branding image.|Small branding image from msgina.dll|
 |`CustomBrdLarge`|REG_SZ|Set to the path of a BMP file to use as the large branding image.|Large branding image from msgina.dll|
+|`CustomBrdBG`|REG_DWORD|Set to the color to show behind the brand bitmap.|Blue when using XP msgina.dll, white when using 2000 msgina.dll|
+|`CenterBrand`|REG_DWORD|Set to `1` to center the branding image horizontally.<br>Set to `0` to left-align the branding image.|Centered only when using XP msgina.dll|
 |`CustomBar`|REG_SZ|Set to the path of a BMP file to use as the bar image.|Bar image from msgina.dll|
 |`OptionsExpanded`|REG_DWORD|Set to `1` to expand the options by default.<br>Set to `0` to collapse the options by default.<br>This key is internally managed.|Collapsed|
 ### Customizing the pre-logon background and color scheme

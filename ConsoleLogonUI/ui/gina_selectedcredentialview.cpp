@@ -351,12 +351,12 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		// Resize the dialog (2000+)
 		SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
 
-		// Load branding and bar images
-		ginaManager::Get()->LoadBranding(hWnd, TRUE);
-
 		// Set the focus to the password field
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
+
+		ginaManager::Get()->MoveChildrenForBranding(hWnd, TRUE);
+
 		break;
 	}
 	case WM_COMMAND:
@@ -430,35 +430,15 @@ int CALLBACK ginaSelectedCredentialView::DlgProc(HWND hWnd, UINT message, WPARAM
 		}
 		break;
 	}
-	case WM_ERASEBKGND:
+	case WM_PAINT:
 	{
-		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
-		{
-			return 0;
-		}
-
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = ginaManager::Get()->largeBrandingHeight;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = ginaManager::Get()->largeBrandingHeight + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
-		break;
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+		RECT rc;
+		GetClientRect(hWnd, &rc);
+		ginaManager::Get()->PaintBranding(hdc, &rc, TRUE);
+		EndPaint(hWnd, &ps);
+		return 0;
 	}
 	case WM_DESTROY:
 	{
@@ -572,6 +552,9 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		dlgHeightToReduce = domainRect.bottom - domainRect.top + 8;
 		bottomBtnYToMove = domainRect.bottom - domainRect.top + 8;
 
+		// Disable Cancel button
+		EnableWindow(GetDlgItem(hWnd, IDCANCEL), FALSE);
+
 		// Hide the caps-lock warning balloon
 		if (ginaManager::Get()->config.hideCapsLockBalloon)
 		{
@@ -605,12 +588,12 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 			SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
 		}
 
-		// Load branding and bar images
-		ginaManager::Get()->LoadBranding(hWnd, FALSE);
-
 		// Set the focus to the password field
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_LOCKED_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
+
+		ginaManager::Get()->MoveChildrenForBranding(hWnd, FALSE);
+
 		break;
 	}
 	case WM_COMMAND:
@@ -650,35 +633,15 @@ int CALLBACK ginaSelectedCredentialViewLocked::DlgProc(HWND hWnd, UINT message, 
 		}
 		break;
 	}
-	case WM_ERASEBKGND:
+	case WM_PAINT:
 	{
-		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
-		{
-			return 0;
-		}
-
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = ginaManager::Get()->smallBrandingHeight;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = ginaManager::Get()->smallBrandingHeight + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
-		break;
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+		RECT rc;
+		GetClientRect(hWnd, &rc);
+		ginaManager::Get()->PaintBranding(hdc, &rc, FALSE);
+		EndPaint(hWnd, &ps);
+		return 0;
 	}
 	case WM_DESTROY:
 	{
@@ -771,7 +734,8 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CHPW_OLD_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
 
-		ginaManager::Get()->LoadBranding(hWnd, FALSE);
+		ginaManager::Get()->MoveChildrenForBranding(hWnd, FALSE);
+
 		break;
 	}
 	case WM_COMMAND:
@@ -838,35 +802,15 @@ int CALLBACK ginaChangePwdView::DlgProc(HWND hWnd, UINT message, WPARAM wParam, 
 		}
 		break;
 	}
-	case WM_ERASEBKGND:
+	case WM_PAINT:
 	{
-		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
-		{
-			return 0;
-		}
-
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = ginaManager::Get()->smallBrandingHeight;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = ginaManager::Get()->smallBrandingHeight + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
-		break;
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+		RECT rc;
+		GetClientRect(hWnd, &rc);
+		ginaManager::Get()->PaintBranding(hdc, &rc, FALSE);
+		EndPaint(hWnd, &ps);
+		return 0;
 	}
 	case WM_DESTROY:
 	{

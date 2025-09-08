@@ -15,6 +15,10 @@
 #define GINA_BMP_BRD_SMALL 101
 #define GINA_BMP_BAR 103
 
+#define GINA_STR_BUILT_ON_NT           8100
+#define GINA_STR_BUILT_ON_NT_FONT      8101
+#define GINA_STR_BUILT_ON_NT_FONT_SIZE 8102
+
 // Not implemented in upstream CLH
 //#define GINA_DLG_CAD 1400
 //#define GINA_DLG_CAD_LOCKED 1900
@@ -61,12 +65,18 @@ public:
 	HINSTANCE hInstance;
 	HMODULE hGinaDll;
 
-	HBITMAP hLargeBranding;
-	HBITMAP hSmallBranding;
-	HBITMAP hBar;
+	HBITMAP  hLargeBranding;
+	HBITMAP  hSmallBranding;
+	HBITMAP  hBar;
+	SIZE     _sizeLargeBrand;
+	SIZE     _sizeSmallBrand;
+	SIZE     _sizeBar;
+	COLORREF _crBrandBG;
+	BOOL     _fCenterBrand;
 
-	int largeBrandingHeight;
-	int smallBrandingHeight;
+	HFONT _hfontBuiltOnNT;
+	HFONT _hfontBuiltOnNTBold;
+	WCHAR _szBuiltOnNT[MAX_PATH];
 
 	int ginaVersion;
 
@@ -81,7 +91,8 @@ public:
 	void LoadGina();
 	void UnloadGina();
 
-	void LoadBranding(HWND hDlg, BOOL isLarge, BOOL noBarAsImgCtrl = FALSE);
+	void MoveChildrenForBranding(HWND hwnd, BOOL fLarge);
+	void PaintBranding(HDC hdc, RECT *prc, BOOL fLarge = FALSE, int iBarOffset = 0);
 
 	void CloseAllDialogs();
 	void PostThemeChange();

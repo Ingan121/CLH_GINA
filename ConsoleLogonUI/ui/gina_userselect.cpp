@@ -323,12 +323,12 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		// Resize the dialog (2000+)
 		SetWindowPos(hWnd, NULL, 0, 0, dlgRect.right - dlgRect.left, dlgRect.bottom - dlgRect.top - dlgHeightToReduce, SWP_NOZORDER | SWP_NOMOVE);
 
-		// Load branding and bar images
-		ginaManager::Get()->LoadBranding(hWnd, TRUE);
-
 		// Set focus to the username combo box
 		SetFocus(GetDlgItem(hWnd, GetRes(IDC_CREDVIEW_PASSWORD)));
 		SendMessage(GetDlgItem(hWnd, IDC_OK), BM_SETSTYLE, BS_DEFPUSHBUTTON, TRUE);
+
+		ginaManager::Get()->MoveChildrenForBranding(hWnd, TRUE);
+
 		break;
 	}
 	case WM_COMMAND:
@@ -382,35 +382,15 @@ int CALLBACK ginaUserSelect::DlgProc(HWND hWnd, UINT message, WPARAM wParam, LPA
 		}
 		break;
 	}
-	case WM_ERASEBKGND:
+	case WM_PAINT:
 	{
-		if (ginaManager::Get()->ginaVersion == GINA_VER_NT4)
-		{
-			return 0;
-		}
-
-		HDC hdc = (HDC)wParam;
-		RECT rect;
-		GetClientRect(hWnd, &rect);
-		int origBottom = rect.bottom;
-		rect.bottom = ginaManager::Get()->largeBrandingHeight;
-		COLORREF brdColor = RGB(255, 255, 255);
-		if (ginaManager::Get()->ginaVersion == GINA_VER_XP)
-		{
-			brdColor = RGB(90, 124, 223);
-		}
-		HBRUSH hBrush = CreateSolidBrush(brdColor);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		rect.bottom = origBottom;
-		rect.top = ginaManager::Get()->largeBrandingHeight + GINA_BAR_HEIGHT;
-		COLORREF btnFace;
-		btnFace = GetSysColor(COLOR_BTNFACE);
-		hBrush = CreateSolidBrush(btnFace);
-		FillRect(hdc, &rect, hBrush);
-		DeleteObject(hBrush);
-		return 1;
-		break;
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+		RECT rc;
+		GetClientRect(hWnd, &rc);
+		ginaManager::Get()->PaintBranding(hdc, &rc, TRUE);
+		EndPaint(hWnd, &ps);
+		return 0;
 	}
 	case WM_DESTROY:
 	{
