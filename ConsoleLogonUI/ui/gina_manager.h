@@ -52,9 +52,17 @@
 #include "gina_statusview.h"
 #include "gina_securitycontrol.h"
 
+enum WINDOWTHEME
+{
+	WT_COMPOSITED = 0,
+	WT_CLASSIC,
+	WT_UXTHEME,
+	WT_COUNT
+};
+
 struct ginaConfig {
 	BOOL showConsole;
-	BOOL classicTheme;
+	WINDOWTHEME classicTheme;
 	BOOL hideStatusView;
 	BOOL hideCapsLockBalloon;
 };

@@ -11,6 +11,7 @@
 #include <Uxtheme.h>
 #include <dwmapi.h>
 #include <thread>
+#include "ui/gina_manager.h"
 
 #pragma comment(lib, "UxTheme.lib")
 #pragma comment(lib, "netapi32.lib")
@@ -101,15 +102,19 @@ static bool EnableShutdownPrivilege()
 
 static void MakeWindowClassic(HWND hWnd)
 {
-	SetWindowTheme(hWnd, L" ", L" ");
+	if (ginaManager::Get()->config.classicTheme == WT_CLASSIC)
+		SetWindowTheme(hWnd, L" ", L" ");
     DWMNCRENDERINGPOLICY ncrp = DWMNCRP_DISABLED;
     DwmSetWindowAttribute(hWnd, DWMWA_NCRENDERING_POLICY, &ncrp, sizeof(DWMNCRENDERINGPOLICY));
 	// Iterate over all child windows
-	HWND hChild = GetWindow(hWnd, GW_CHILD);
-	while (hChild != NULL)
+	if (ginaManager::Get()->config.classicTheme == WT_CLASSIC)
 	{
-		SetWindowTheme(hChild, L" ", L" ");
-		hChild = GetWindow(hChild, GW_HWNDNEXT);
+		HWND hChild = GetWindow(hWnd, GW_CHILD);
+		while (hChild != NULL)
+		{
+			SetWindowTheme(hChild, L" ", L" ");
+			hChild = GetWindow(hChild, GW_HWNDNEXT);
+		}
 	}
 }
 

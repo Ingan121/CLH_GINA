@@ -57,7 +57,7 @@ or merge the regkey in the release zip as trusted installer.
 |Name|Type|Description|Default Behavior|
 |----|----|-----------|-------|
 |`ShowConsole`|REG_DWORD|Set to `1` to show the console window.|Hidden|
-|`ClassicTheme`|REG_DWORD|Set to `1` to make the windows use the classic theme.<br>Set to `0` to use the default theme.|Themed only when using XP msgina.dll|
+|`ClassicTheme`|REG_DWORD|Set to `2` to make windows use the basic theme.<br>Set to `1` to make the windows use the classic theme.<br>Set to `0` to use the default theme.|Basic theme when using XP msgina.dll, classic theme otherwise|
 |`HideStatusView`|REG_DWORD|Set to `1` to hide the status view.<br>Set to `0` to show the status view.|Hidden only when using NT4 msgina.dll|
 |`HideCapsLockBalloon`|REG_DWORD|Set to `1` to hide the caps lock warning balloon.<br>Set to `0` to show the caps lock warning balloon.|Shown only when using XP msgina.dll|
 |`CustomWallHost`|REG_SZ|Set to the path of the host process for the custom wallpaper.<br>If the value is not present, CLH_GINA's custom wallpaper implementation will be used.|CLH_GINA's custom wallpaper implementation|

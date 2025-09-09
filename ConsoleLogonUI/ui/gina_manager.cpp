@@ -24,7 +24,7 @@ ginaManager::ginaManager()
 	initedPreLogon = FALSE;
 	config = {
 		FALSE,
-		FALSE,
+		WT_COMPOSITED,
 		FALSE
 	};
 }
@@ -185,13 +185,13 @@ void ginaManager::LoadGina()
 #endif
 
 	int classicTheme = GetConfigInt(L"ClassicTheme", -1);
-	if (classicTheme == -1)
+	if (classicTheme == -1 || classicTheme >= WT_COUNT)
 	{
-		config.classicTheme = ginaVersion != GINA_VER_XP;
+		config.classicTheme = (ginaVersion == GINA_VER_XP) ? WT_UXTHEME : WT_CLASSIC;
 	}
 	else
 	{
-		config.classicTheme = classicTheme;
+		config.classicTheme = (WINDOWTHEME)classicTheme;
 	}
 
 	int hideStatusView = GetConfigInt(L"HideStatusView", -1);
