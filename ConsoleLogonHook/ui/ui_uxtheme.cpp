@@ -4,64 +4,61 @@
 #include "ui_uxtheme.h"
 #include <util/memory_man.h>
 
-// Based on https://windhawk.net/mods/fix-basic-caption-text by aubymory
-
-typedef int WINDOWPARTS, CLOSEBUTTONSTATES;
-
 enum FRAMESTATES
 {
     FS_ACTIVE = 0x1,
     FS_INACTIVE = 0x2
 };
 
-typedef struct _NCWNDMET
-{
-    BOOL fValid;
-    BOOL fFrame;
-    BOOL fSmallFrame;
-    BOOL fMin;
-    BOOL fMaxed;
-    BOOL fFullMaxed;
-    BOOL fDirtyRects;
-    BOOL fCustomFrame;
-    BOOL fCustom;
-    DWORD dwStyle;
-    DWORD dwExStyle;
-    DWORD dwWindowStatus;
-    DWORD dwStyleClass;
-    WINDOWPARTS rgframeparts[4];
-    WINDOWPARTS rgsizehitparts[4];
-    FRAMESTATES framestate;
-    HFONT hfCaption;
-    COLORREF rgbCaption;
-    SIZE sizeCaptionText;
-    MARGINS CaptionMargins;
-    int iMinButtonPart;
-    int iMaxButtonPart;
-    CLOSEBUTTONSTATES rawCloseBtnState;
-    CLOSEBUTTONSTATES rawMinBtnState;
-    CLOSEBUTTONSTATES rawMaxBtnState;
-    CLOSEBUTTONSTATES rawHelpBtnState;
-    int cyMenu;
-    int cnMenuOffsetLeft;
-    int cnMenuOffsetRight;
-    int cnMenuOffsetTop;
-    int cnBorders;
-    RECT rcS0[26];
-    RECT rcW0[26];
-} NCWNDMET;
+HRESULT (WINAPI *GetThemeClass)(HTHEME hTheme, LPWSTR pszClassName, int cchClassName);
 
-DWORD(__fastcall* _NCWNDMET__GetCaptionColor_orig)(NCWNDMET*, bool);
-DWORD __fastcall _NCWNDMET__GetCaptionColor_hook(NCWNDMET* pThis, bool bDarkText)
+HRESULT (WINAPI *DrawThemeTextEx_orig)(
+    HTHEME        hTheme,
+    HDC           hdc,
+    int           iPartId,
+    int           iStateId,
+    LPCWSTR       pszText,
+    int           cchText,
+    DWORD         dwTextFlags,
+    LPRECT        pRect,
+    const DTTOPTS *pOptions
+);
+
+HRESULT WINAPI DrawThemeTextEx_hook(
+    HTHEME        hTheme,
+    HDC           hdc,
+    int           iPartId,
+    int           iStateId,
+    LPCWSTR       pszText,
+    int           cchText,
+    DWORD         dwTextFlags,
+    LPRECT        pRect,
+    const DTTOPTS *pOptions
+)
 {
-    bool fInactive = (pThis->framestate == FS_INACTIVE);
-    return GetSysColor(
-        fInactive ? COLOR_INACTIVECAPTIONTEXT : COLOR_CAPTIONTEXT
-    );
+    if (hTheme && hdc && pOptions
+    && (iStateId == FS_ACTIVE || iStateId == FS_INACTIVE))
+    {
+        WCHAR szThemeClass[64];
+        if (SUCCEEDED(GetThemeClass(hTheme, szThemeClass, ARRAYSIZE(szThemeClass)))
+        && !_wcsicmp(szThemeClass, L"Window"))
+        {
+            ((DTTOPTS *)pOptions)->crText = GetSysColor((iStateId == FS_INACTIVE) ? COLOR_INACTIVECAPTIONTEXT : COLOR_CAPTIONTEXT);
+        }
+    }
+    return DrawThemeTextEx_orig(hTheme, hdc, iPartId, iStateId, pszText, cchText, dwTextFlags, pRect, pOptions);
 }
 
 void uiUxTheme::InitHooks(uintptr_t baseaddress)
 {
-	_NCWNDMET__GetCaptionColor_orig = memory::FindPatternCached<decltype(_NCWNDMET__GetCaptionColor_orig)>("_NCWNDMET__GetCaptionColor", { "48 89 5C 24 10 55 56 57 41 56 41 57 48 8B" }, false, L"UxTheme.dll");
-	Hook(_NCWNDMET__GetCaptionColor_orig, _NCWNDMET__GetCaptionColor_hook);
+    HMODULE hUxTheme = GetModuleHandleW(L"UxTheme.dll");
+    if (hUxTheme)
+    { 
+        *(void **)&GetThemeClass = (void *)GetProcAddress(hUxTheme, (LPCSTR)74);
+        if (GetThemeClass)
+        {
+            *(void **)&DrawThemeTextEx_orig = (void *)GetProcAddress(hUxTheme, "DrawThemeTextEx");
+            Hook(DrawThemeTextEx_orig, DrawThemeTextEx_hook);
+        }
+    }
 }
